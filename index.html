@@ -7,29 +7,26 @@
   <style>
     body {
       margin: 0;
-      padding: 0;
+      padding: 20px;
       background: #121212;
       color: #fff;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
       box-sizing: border-box;
-      padding: 20px;
     }
     h1 {
       font-size: 2rem;
       margin-bottom: 8px;
       color: #00ffcc;
-      text-shadow: 0 0 10px rgba(0, 255, 204, 0.4);
       text-align: center;
     }
     p {
       color: #aaa;
       margin-bottom: 30px;
-      font-size: 0.95rem;
       text-align: center;
     }
     .menu-container {
@@ -49,27 +46,24 @@
       color: white;
       font-size: 1.2rem;
       font-weight: bold;
-      transition: all 0.25s ease;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+      transition: 0.25s;
       display: block;
     }
     .card.cowboy {
       border-color: #8b4513;
       background: linear-gradient(145deg, #2a1810, #1e1e1e);
     }
-    .card.cowboy:active, .card.cowboy:hover {
+    .card.cowboy:hover {
       background: #8b4513;
-      box-shadow: 0 0 25px #ffd700;
-      transform: translateY(-3px);
+      box-shadow: 0 0 20px #ffd700;
     }
     .card.green-lantern {
       border-color: #00ff00;
       background: linear-gradient(145deg, #0a290a, #1e1e1e);
     }
-    .card.green-lantern:active, .card.green-lantern:hover {
+    .card.green-lantern:hover {
       background: #008000;
-      box-shadow: 0 0 25px #00ff00;
-      transform: translateY(-3px);
+      box-shadow: 0 0 20px #00ff00;
     }
   </style>
 </head>
@@ -79,12 +73,10 @@
   <p>เลือกโปรเจกต์ AR ที่ต้องการทดสอบได้เลยเพื่อน!</p>
 
   <div class="menu-container">
-    <!-- ปุ่มกดไปหน้า Cowboy -->
     <a href="cowboy.html" class="card cowboy">
       🤠 Wild West Cowboy 3D AR
     </a>
 
-    <!-- ปุ่มกดไปหน้า Green Lantern -->
     <a href="green_lantern.html" class="card green-lantern">
       🟢 Green Lantern AR
     </a>
