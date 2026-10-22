@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ryu AR Web Experience Hub</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #121212;
+      color: #fff;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 8px;
+      color: #00ffcc;
+      text-align: center;
+    }
+    p {
+      color: #aaa;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .menu-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 100%;
+      max-width: 380px;
+    }
+    .card {
+      background: #1e1e1e;
+      border: 2px solid #333;
+      border-radius: 16px;
+      padding: 22px 15px;
+      text-align: center;
+      text-decoration: none;
+      color: white;
+      font-size: 1.2rem;
+      font-weight: bold;
+      transition: 0.25s;
+      display: block;
+    }
+    .card.cowboy {
+      border-color: #8b4513;
+      background: linear-gradient(145deg, #2a1810, #1e1e1e);
+    }
+    .card.cowboy:hover {
+      background: #8b4513;
+      box-shadow: 0 0 20px #ffd700;
+    }
+    .card.green-lantern {
+      border-color: #00ff00;
+      background: linear-gradient(145deg, #0a290a, #1e1e1e);
+    }
+    .card.green-lantern:hover {
+      background: #008000;
+      box-shadow: 0 0 20px #00ff00;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🤠 RYU AR HUB 🟢</h1>
+  <p>เลือกโปรเจกต์ AR ที่ต้องการทดสอบได้เลยเพื่อน!</p>
+
+  <div class="menu-container">
+    <a href="cowboy.html" class="card cowboy">
+      🤠 Wild West Cowboy 3D AR
+    </a>
+
+    <a href="green_lantern.html" class="card green-lantern">
+      🟢 Green Lantern AR
+    </a>
+  </div>
+
+</body>
+</html>
