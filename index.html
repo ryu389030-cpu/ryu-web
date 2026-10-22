@@ -1,12 +1,215 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เว็บของฉัน</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Green Lantern AR Experience</title>
+  
+  <!-- MediaPipe Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+    #container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    video {
+      display: none;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+    #start-btn {
+      position: absolute;
+      z-index: 10;
+      padding: 18px 36px;
+      font-size: 22px;
+      font-weight: bold;
+      color: #fff;
+      background: #00ff66;
+      border: none;
+      border-radius: 50px;
+      box-shadow: 0 0 25px #00ff66;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: 0.3s;
+    }
+    #start-btn:hover {
+      background: #00cc52;
+      box-shadow: 0 0 35px #00ff66;
+      transform: scale(1.05);
+    }
+  </style>
 </head>
 <body>
-    <h1>สวัสดีจ้า! เว็บไซต์แรกของฉันบน GitHub Pages 🎉</h1>
-    <p>เว็บนี้สร้างและโฮสต์ฟรีโดย GitHub</p>
+
+  <div id="container">
+    <button id="start-btn">⚡ BECOME GREEN LANTERN ⚡</button>
+    <video id="webcam" playsinline></video>
+    <canvas id="output_canvas"></canvas>
+  </div>
+
+  <!-- Audio เพลง Hero -->
+  <audio id="bg-music" src="Hero.mp3" loop></audio>
+
+  <script>
+    const videoElement = document.getElementById('webcam');
+    const canvasElement = document.getElementById('output_canvas');
+    const canvasCtx = canvasElement.getContext('2d');
+    const startBtn = document.getElementById('start-btn');
+    const bgMusic = document.getElementById('bg-music');
+
+    // โหลดไฟล์รูปภาพตามชื่อไฟล์จริงของคุณ (หน้ากากใช้ green lantern mask2.png)
+    const maskImg = new Image();
+    maskImg.src = 'green lantern mask2.png';
+
+    const ringImg = new Image();
+    ringImg.src = 'landtern ring.png';
+
+    const chpImg = new Image();
+    chpImg.src = "Ch'p-Photoroom.png";
+
+    const mogoImg = new Image();
+    mogoImg.src = 'mogo.png';
+
+    let faceResults = null;
+    let handResults = null;
+
+    // ตั้งค่า Face Mesh
+    const faceMesh = new FaceMesh({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+    });
+    faceMesh.setOptions({
+      maxNumFaces: 1,
+      refineLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    faceMesh.onResults((results) => { faceResults = results; });
+
+    // ตั้งค่า Hands Tracking
+    const hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+    hands.setOptions({
+      maxNumHands: 2,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    hands.onResults((results) => { handResults = results; });
+
+    // ปุ่มกดเพื่อเริ่มกล้องและเปิดเพลง
+    startBtn.addEventListener('click', async () => {
+      startBtn.style.display = 'none';
+      bgMusic.play().catch(e => console.log("Audio play error:", e));
+
+      const camera = new Camera(videoElement, {
+        onFrame: async () => {
+          await faceMesh.send({ image: videoElement });
+          await hands.send({ image: videoElement });
+          drawScene();
+        },
+        width: 1280,
+        height: 720
+      });
+      camera.start();
+    });
+
+    function drawScene() {
+      canvasElement.width = videoElement.videoWidth || 1280;
+      canvasElement.height = videoElement.videoHeight || 720;
+
+      const width = canvasElement.width;
+      const height = canvasElement.height;
+
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, width, height);
+      
+      // วาดภาพจากกล้อง
+      canvasCtx.drawImage(videoElement, 0, 0, width, height);
+
+      // 1. วาด Ch'p มุมซ้ายบน
+      const chpWidth = width * 0.22;
+      const chpHeight = chpWidth * (chpImg.height / chpImg.width || 1);
+      canvasCtx.drawImage(chpImg, width * 0.05, height * 0.08, chpWidth, chpHeight);
+
+      // 2. วาด Mogo มุมขวา
+      const mogoWidth = width * 0.28;
+      const mogoHeight = mogoWidth * (mogoImg.height / mogoImg.width || 1);
+      canvasCtx.drawImage(mogoImg, width * 0.68, height * 0.12, mogoWidth, mogoHeight);
+
+      // 3. วาดหน้ากาก Green Lantern บนใบหน้า
+      if (faceResults && faceResults.multiFaceLandmarks && faceResults.multiFaceLandmarks.length > 0) {
+        const landmarks = faceResults.multiFaceLandmarks[0];
+
+        const leftEye = landmarks[33];
+        const rightEye = landmarks[263];
+
+        const eyeX = ((leftEye.x + rightEye.x) / 2) * width;
+        const eyeY = ((leftEye.y + rightEye.y) / 2) * height;
+
+        const deltaX = (rightEye.x - leftEye.x) * width;
+        const deltaY = (rightEye.y - leftEye.y) * height;
+        const eyeDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        const angle = Math.atan2(deltaY, deltaX);
+
+        const maskWidth = eyeDistance * 2.7;
+        const maskHeight = maskWidth * (maskImg.height / maskImg.width || 0.5);
+
+        canvasCtx.save();
+        canvasCtx.translate(eyeX, eyeY);
+        canvasCtx.rotate(angle);
+        canvasCtx.drawImage(maskImg, -maskWidth / 2, -maskHeight / 2, maskWidth, maskHeight);
+        canvasCtx.restore();
+      }
+
+      // 4. วาดแหวนที่นิ้วกลาง (Middle Finger)
+      if (handResults && handResults.multiHandLandmarks) {
+        for (const landmarks of handResults.multiHandLandmarks) {
+          const middleFingerBase = landmarks[9];
+
+          const rx = middleFingerBase.x * width;
+          const ry = middleFingerBase.y * height;
+
+          const wrist = landmarks[0];
+          const middleTip = landmarks[12];
+          const handSize = Math.sqrt(
+            Math.pow((middleTip.x - wrist.x) * width, 2) + 
+            Math.pow((middleTip.y - wrist.y) * height, 2)
+          );
+
+          const ringSize = handSize * 0.28;
+
+          canvasCtx.save();
+          canvasCtx.translate(rx, ry);
+          
+          canvasCtx.shadowColor = '#00ff66';
+          canvasCtx.shadowBlur = 20;
+
+          canvasCtx.drawImage(ringImg, -ringSize / 2, -ringSize / 2, ringSize, ringSize);
+          canvasCtx.restore();
+        }
+      }
+
+      canvasCtx.restore();
+    }
+  </script>
 </body>
 </html>
