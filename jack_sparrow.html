@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Captain Jack Sparrow AR Experience</title>
+  
+  <!-- MediaPipe Face Mesh -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+    #container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    video {
+      display: none;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1); /* กระจกเงา */
+    }
+    #start-btn {
+      position: absolute;
+      z-index: 10;
+      padding: 18px 36px;
+      font-size: 22px;
+      font-weight: bold;
+      color: #fff;
+      background: #b22222;
+      border: 2px solid #ffd700;
+      border-radius: 50px;
+      box-shadow: 0 0 25px #b22222;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: 0.3s;
+    }
+    #start-btn:hover {
+      background: #8b0000;
+      box-shadow: 0 0 35px #ffd700;
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="container">
+    <button id="start-btn">🏴‍☠️ BECOME CAPTAIN JACK SPARROW 🏴‍☠️</button>
+    <video id="webcam" playsinline></video>
+    <canvas id="output_canvas"></canvas>
+  </div>
+
+  <!-- Audio เพลง Pirates of the Caribbean -->
+  <audio id="bg-music" src="Main Theme Pirates of the Caribbean.mp3" loop></audio>
+
+  <script>
+    const videoElement = document.getElementById('webcam');
+    const canvasElement = document.getElementById('output_canvas');
+    const canvasCtx = canvasElement.getContext('2d');
+    const startBtn = document.getElementById('start-btn');
+    const bgMusic = document.getElementById('bg-music');
+
+    // โหลดภาพอุปกรณ์ทั้ง 3 ชิ้น
+    const hatImg = new Image();
+    hatImg.src = 'Hat Jack Sparrow-Photoroom.png';
+
+    const hairImg = new Image();
+    hairImg.src = 'Hair Jack Sparrow-Photoroom.png';
+
+    const eyePatchImg = new Image();
+    eyePatchImg.src = 'Eye Patch.png';
+
+    let faceResults = null;
+
+    // ตั้งค่า MediaPipe Face Mesh
+    const faceMesh = new FaceMesh({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+    });
+    faceMesh.setOptions({
+      maxNumFaces: 1,
+      refineLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    faceMesh.onResults((results) => { faceResults = results; });
+
+    // คลิกปุ่มเพื่อเปิดกล้องและเล่นเพลง
+    startBtn.addEventListener('click', async () => {
+      startBtn.style.display = 'none';
+      bgMusic.play().catch(e => console.log("Audio play error:", e));
+
+      const camera = new Camera(videoElement, {
+        onFrame: async () => {
+          await faceMesh.send({ image: videoElement });
+          drawScene();
+        },
+        width: 1280,
+        height: 720
+      });
+      camera.start();
+    });
+
+    function drawScene() {
+      canvasElement.width = videoElement.videoWidth || 1280;
+      canvasElement.height = videoElement.videoHeight || 720;
+
+      const width = canvasElement.width;
+      const height = canvasElement.height;
+
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, width, height);
+      
+      // วาดภาพวิดีโอจากกล้อง
+      canvasCtx.drawImage(videoElement, 0, 0, width, height);
+
+      if (faceResults && faceResults.multiFaceLandmarks && faceResults.multiFaceLandmarks.length > 0) {
+        const landmarks = faceResults.multiFaceLandmarks[0];
+
+        // จุดอ้างอิงสำคัญบนใบหน้า
+        const leftEye = landmarks[33];
+        const rightEye = landmarks[263];
+        const forehead = landmarks[10]; // หน้าผาก
+        const rightEyeCenter = landmarks[473] || rightEye; // ตาขวา (ใส่ผ้าปิดตา)
+
+        const eyeX = ((leftEye.x + rightEye.x) / 2) * width;
+        const eyeY = ((leftEye.y + rightEye.y) / 2) * height;
+
+        const deltaX = (rightEye.x - leftEye.x) * width;
+        const deltaY = (rightEye.y - leftEye.y) * height;
+        const eyeDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        const angle = Math.atan2(deltaY, deltaX);
+
+        // 1. วาดผม Jack Sparrow (Hair & Bandana)
+        const hairWidth = eyeDistance * 3.2;
+        const hairHeight = hairWidth * (hairImg.height / hairImg.width || 1);
+        canvasCtx.save();
+        canvasCtx.translate(eyeX, eyeY + (eyeDistance * 0.2));
+        canvasCtx.rotate(angle);
+        canvasCtx.drawImage(hairImg, -hairWidth / 2, -hairHeight * 0.35, hairWidth, hairHeight);
+        canvasCtx.restore();
+
+        // 2. วาดหมวกโจรสลัด (Hat) วางไว้เหนือหน้าผาก
+        const hatWidth = eyeDistance * 3.8;
+        const hatHeight = hatWidth * (hatImg.height / hatImg.width || 0.6);
+        const foreheadX = forehead.x * width;
+        const foreheadY = forehead.y * height;
+        canvasCtx.save();
+        canvasCtx.translate(foreheadX, foreheadY - (eyeDistance * 0.6));
+        canvasCtx.rotate(angle);
+        canvasCtx.drawImage(hatImg, -hatWidth / 2, -hatHeight / 2, hatWidth, hatHeight);
+        canvasCtx.restore();
+
+        // 3. วาดผ้าปิดตา (Eye Patch) ครอบตาขวา
+        const patchWidth = eyeDistance * 1.1;
+        const patchHeight = patchWidth * (eyePatchImg.height / eyePatchImg.width || 1);
+        const patchX = rightEyeCenter.x * width;
+        const patchY = rightEyeCenter.y * height;
+        canvasCtx.save();
+        canvasCtx.translate(patchX, patchY);
+        canvasCtx.rotate(angle);
+        canvasCtx.drawImage(eyePatchImg, -patchWidth / 2, -patchHeight / 2, patchWidth, patchHeight);
+        canvasCtx.restore();
+      }
+
+      canvasCtx.restore();
+    }
+  </script>
+</body>
+</html>
