@@ -11,8 +11,6 @@
       overflow: hidden; background-color: #000; font-family: sans-serif;
     }
     #app-container { position: relative; width: 100vw; height: 100vh; }
-    
-    /* กล้องและ Canvas ปรับขนาดเต็มจอพอดี */
     video {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       object-fit: cover; transform: scaleX(-1); z-index: 1;
@@ -21,7 +19,6 @@
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       pointer-events: none; z-index: 2;
     }
-
     #start-btn {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       z-index: 99999; padding: 20px 40px; font-size: 22px; font-weight: bold;
@@ -30,7 +27,6 @@
     }
   </style>
 
-  <!-- MediaPipe Trackers -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
@@ -43,7 +39,6 @@
     <canvas id="output_canvas"></canvas>
   </div>
 
-  <!-- เพลงประกอบตามชื่อไฟล์ที่ส่งมา -->
   <audio id="bg-music" src="Hero.mp3" loop></audio>
 
   <script>
@@ -53,7 +48,6 @@
     const startBtn = document.getElementById('start-btn');
     const bgMusic = document.getElementById('bg-music');
 
-    // โหลดไฟล์รูปภาพตามชื่อไฟล์เป๊ะๆ
     const imgMask = new Image(); imgMask.src = 'green lantern mask2.png';
     const imgRing = new Image(); imgRing.src = 'landtern ring.png';
     const imgMogo = new Image(); imgMogo.src = 'mogo.png';
@@ -69,7 +63,6 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // Setup MediaPipe
     const faceMesh = new FaceMesh({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}` });
     faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true });
     faceMesh.onResults(r => { faceData = r.multiFaceLandmarks?.[0] || null; });
@@ -80,15 +73,14 @@
 
     startBtn.addEventListener('click', async () => {
       startBtn.style.display = 'none';
-      bgMusic.play().catch(e => console.log("Audio play error:", e));
+      bgMusic.play().catch(e => console.log(e));
 
       const cameraUtils = new Camera(videoElement, {
         onFrame: async () => {
           await faceMesh.send({ image: videoElement });
           await hands.send({ image: videoElement });
         },
-        width: 1280,
-        height: 720
+        width: 1280, height: 720
       });
       cameraUtils.start();
       requestAnimationFrame(renderLoop);
@@ -98,42 +90,31 @@
       const w = canvasElement.width;
       const h = canvasElement.height;
 
-      // ล้างคราบเฟรมเก่า
       ctx.clearRect(0, 0, w, h);
 
-      // 1. วาด Mogo (ดาวเคราะห์) ฝั่งซ้ายบน
+      // 1. วาด Mogo (ดาวเคราะห์) ไว้มุมซ้ายบนชัดเจน ไม่ให้ทับหัว
       if (imgMogo.complete) {
-        const mogoSize = Math.min(w, h) * 0.35;
-        ctx.drawImage(imgMogo, w * 0.03, h * 0.08, mogoSize, mogoSize);
+        const mogoSize = Math.min(w, h) * 0.32;
+        ctx.drawImage(imgMogo, w * 0.05, h * 0.05, mogoSize, mogoSize);
       }
 
-      // 2. วาด Ch'p (กระรอก) ฝั่งขวาบน
+      // 2. วาด Ch'p (กระรอก) ไว้มุมขวาบน
       if (imgChp.complete) {
-        const chpWidth = Math.min(w, h) * 0.28;
+        const chpWidth = Math.min(w, h) * 0.25;
         const chpHeight = chpWidth * (imgChp.height / imgChp.width || 1.2);
-        ctx.drawImage(imgChp, w - chpWidth - (w * 0.03), h * 0.05, chpWidth, chpHeight);
+        ctx.drawImage(imgChp, w - chpWidth - (w * 0.05), h * 0.03, chpWidth, chpHeight);
       }
 
       // 3. วาด หน้ากาก Green Lantern บนใบหน้า
       if (faceData && imgMask.complete) {
-        // ตาซ้าย (33), ตาขวา (263), สันจมูกระหว่างตา (168)
-        const leftEye = faceData[33];
-        const rightEye = faceData[263];
-        const noseBridge = faceData[168];
-
-        // แปลงพิกัด MediaPipe เป็นพิกเซลจอ (สลับแกน X เพราะวีดีโอกระจกเงา)
-        const noseX = (1 - noseBridge.x) * w;
-        const noseY = noseBridge.y * h;
-
+        const leftEye = faceData[33], rightEye = faceData[263], noseBridge = faceData[168];
+        const noseX = (1 - noseBridge.x) * w, noseY = noseBridge.y * h;
         const lx = (1 - leftEye.x) * w, ly = leftEye.y * h;
         const rx = (1 - rightEye.x) * w, ry = rightEye.y * h;
 
-        // คำนวณระยะห่างระหว่างตาเพื่อปรับขนาดหน้ากากให้อัตโนมัติ
         const eyeDist = Math.hypot(rx - lx, ry - ly);
-        const maskWidth = eyeDist * 3.2; // ปรับความกว้างหน้ากากให้พอดีตา
+        const maskWidth = eyeDist * 3.2;
         const maskHeight = maskWidth * (imgMask.height / imgMask.width || 0.5);
-
-        // มุมเอียงตามหัว
         const angle = Math.atan2(ry - ly, rx - lx);
 
         ctx.save();
@@ -143,21 +124,28 @@
         ctx.restore();
       }
 
-      // 4. วาด แหวน Green Lantern ที่นิ้วกลาง
+      // 4. วาด แหวน Green Lantern ที่นิ้วกลาง (ปรับสัดส่วนรูปและพิกัดให้เป๊ะ)
       if (handData && imgRing.complete) {
-        // โคนนิ้วกลาง (Landmark 9) หรือ ข้อกลางนิ้วกลาง (Landmark 10)
-        const middleFinger = handData[9];
-        const ringX = (1 - middleFinger.x) * w;
-        const ringY = middleFinger.y * h;
+        // ใช้จุดข้อต่อกลางนิ้วกลาง (Landmark 10 หรือ 11) เพื่อให้สวมลงบนนิ้วพอดี
+        const ringJoint = handData[10]; 
+        const ringX = (1 - ringJoint.x) * w;
+        const ringY = ringJoint.y * h;
 
-        // คำนวณขนาดแหวนจากระยะระหว่างโคนมือถึงนิ้ว
         const wrist = handData[0];
         const handSize = Math.hypot((1 - wrist.x) * w - ringX, wrist.y * h - ringY);
-        const ringSize = Math.max(30, handSize * 0.28);
+        
+        // คำนวณสัดส่วนรูปแหวนไม่ให้เบี้ยว
+        const ringWidth = Math.max(35, handSize * 0.35);
+        const ringHeight = ringWidth * (imgRing.height / imgRing.width || 1.0);
+
+        // คำนวณองศานิ้ว
+        const mcp = handData[9], tip = handData[12];
+        const fingerAngle = Math.atan2((tip.y - mcp.y) * h, ((1 - tip.x) - (1 - mcp.x)) * w);
 
         ctx.save();
         ctx.translate(ringX, ringY);
-        ctx.drawImage(imgRing, -ringSize / 2, -ringSize / 2, ringSize, ringSize);
+        ctx.rotate(fingerAngle - Math.PI / 2);
+        ctx.drawImage(imgRing, -ringWidth / 2, -ringHeight / 2, ringWidth, ringHeight);
         ctx.restore();
       }
 
