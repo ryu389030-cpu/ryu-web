@@ -50,12 +50,6 @@
       box-shadow: 0 0 30px rgba(139, 69, 19, 0.9);
       cursor: pointer;
       text-transform: uppercase;
-      transition: 0.3s;
-    }
-    #start-btn:hover {
-      background: #a0522d;
-      box-shadow: 0 0 40px #ffd700;
-      transform: translate(-50%, -50%) scale(1.05);
     }
   </style>
 
@@ -83,7 +77,7 @@
     const startBtn = document.getElementById('start-btn');
     const bgMusic = document.getElementById('bg-music');
 
-    // 1. Three.js Scene Setup
+    // 1. Three.js Scene
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.z = 5;
@@ -92,32 +86,30 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.3);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
     scene.add(ambientLight);
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
     dirLight.position.set(0, 10, 10);
     scene.add(dirLight);
 
-    // 2. Load 3D Models
+    // 2. Load Models
     const loader = new THREE.GLTFLoader();
     let hatModel = null;
     let gunModel = null;
 
     loader.load('cowboy_hat2.glb', (gltf) => {
       hatModel = gltf.scene;
-      hatModel.scale.set(0.9, 0.9, 0.9); // ปรับขนาดหมวกให้เล็กลงพอดีหัว
       hatModel.visible = false;
       scene.add(hatModel);
-    }, undefined, (err) => console.log('Hat model error:', err));
+    });
 
     loader.load('colt_revlover.glb', (gltf) => {
       gunModel = gltf.scene;
-      gunModel.scale.set(0.45, 0.45, 0.45); // ปรับขนาดปืนให้สมส่วนกับมือ
       gunModel.visible = false;
       scene.add(gunModel);
-    }, undefined, (err) => console.log('Gun model error:', err));
+    });
 
-    // 3. Trackers Setup
+    // 3. Trackers
     let faceLandmarksData = null;
     let handLandmarksData = null;
 
@@ -137,7 +129,7 @@
       handLandmarksData = (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) ? results.multiHandLandmarks[0] : null;
     });
 
-    // 4. Start Button Action
+    // 4. Start Button
     startBtn.addEventListener('click', async () => {
       startBtn.style.display = 'none';
       bgMusic.play().catch(e => console.log("Audio play error:", e));
@@ -162,46 +154,79 @@
       }
     });
 
-    function toWorldCoords(x, y, zDepth = 0) {
-      const vec = new THREE.Vector3((1 - x) * 2 - 1, -(y * 2 - 1), 0.5);
-      vec.unproject(camera);
-      const dir = vec.sub(camera.position).normalize();
-      const distance = (zDepth - camera.position.z) / dir.z;
-      return camera.position.clone().add(dir.multiplyScalar(distance));
+    // แปลงพิกัด 2D MediaPipe เป็น 3D World Space
+    function get3DPos(point) {
+      const x = (1 - point.x) * 2 - 1; // สลับแกนเพราะเป็นกระจก
+      const y = -(point.y * 2 - 1);
+      const z = point.z || 0;
+
+      const vector = new THREE.Vector3(x, y, 0.5);
+      vector.unproject(camera);
+      const dir = vector.sub(camera.position).normalize();
+      const distance = -camera.position.z / dir.z;
+      const pos = camera.position.clone().add(dir.multiplyScalar(distance));
+      return { pos, rawX: x, rawY: y, rawZ: z };
     }
 
-    // 5. Render Loop
+    // 5. Render Loop (คํานวณตำแหน่งครอบหัว และกำมือจับปืน)
     function animate() {
       requestAnimationFrame(animate);
 
-      // --- หมวกคาวบอย ---
+      // --- หมวกคาวบอย (คำนวณสวมครอบหัวเป๊ะ) ---
       if (faceLandmarksData && hatModel) {
         hatModel.visible = true;
-        const forehead = faceLandmarksData[10];
-        const pos = toWorldCoords(forehead.x, forehead.y, 0);
 
-        // ดึงหมวกลงมาให้ครอบศีรษะพอดี
-        hatModel.position.set(pos.x, pos.y + 0.12, pos.z);
+        const forehead = faceLandmarksData[10];   // หน้าผากบน
+        const nose = faceLandmarksData[1];          // ดั้งจมูก
+        const leftEye = faceLandmarksData[33];      // ตาซ้าย
+        const rightEye = faceLandmarksData[263];    // ตาขวา
 
-        const leftEye = faceLandmarksData[33];
-        const rightEye = faceLandmarksData[263];
-        const angle = Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x);
-        hatModel.rotation.z = -angle;
+        const forehead3D = get3DPos(forehead);
+        const leftEye3D = get3DPos(leftEye);
+        const rightEye3D = get3DPos(rightEye);
+
+        // 1. หาความกว้างของใบหน้าเพื่อย่อ-ขยายหมวกตามระยะใกล้-ไกล
+        const eyeDistance = leftEye3D.pos.distanceTo(rightEye3D.pos);
+        const scaleFactor = eyeDistance * 3.8; // ปรับตัวคูณสเกลหมวกให้พอดีหัว
+        hatModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
+
+        // 2. วางตำแหน่งหมวกลงมาสวมหัว (กดต่ำลงมาจากหน้าผากเล็กน้อย)
+        hatModel.position.set(forehead3D.pos.x, forehead3D.pos.y - (eyeDistance * 0.2), forehead3D.pos.z);
+
+        // 3. หมุนหมวกตามการหมุนเอียงของศีรษะ
+        const angleZ = Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x);
+        const angleY = Math.atan2(nose.x - forehead.x, nose.z - forehead.z);
+        hatModel.rotation.z = -angleZ;
+        hatModel.rotation.y = angleY * 0.5;
+
       } else if (hatModel) {
         hatModel.visible = false;
       }
 
-      // --- ปืนลูกโม่ ---
+      // --- ปืนลูกโม่ (คำนวณจับเข้าอุ้งมือ) ---
       if (handLandmarksData && gunModel) {
         gunModel.visible = true;
-        const indexFinger = handLandmarksData[8];
-        const wrist = handLandmarksData[0];
-        const pos = toWorldCoords(wrist.x, wrist.y, 0);
 
-        gunModel.position.set(pos.x, pos.y, pos.z);
+        const wrist = handLandmarksData[0];          // ข้อมือ
+        const indexMCP = handLandmarksData[5];       // โคนนิ้วชี้
+        const pinkyMCP = handLandmarksData[17];      // โคนนิ้วก้อย
 
-        const angleHand = Math.atan2(indexFinger.y - wrist.y, indexFinger.x - wrist.x);
-        gunModel.rotation.z = -angleHand + Math.PI / 6;
+        const wrist3D = get3DPos(wrist);
+        const index3D = get3DPos(indexMCP);
+        const pinky3D = get3DPos(pinkyMCP);
+
+        // 1. หาขนาดอุ้งมือเพื่อสเกลปืน
+        const handSize = index3D.pos.distanceTo(pinky3D.pos);
+        const gunScale = handSize * 2.2;
+        gunModel.scale.set(gunScale, gunScale, gunScale);
+
+        // 2. วางด้ามปืนให้อยู่ตรงกลางอุ้งมือ
+        gunModel.position.set(wrist3D.pos.x, wrist3D.pos.y, wrist3D.pos.z);
+
+        // 3. ปรับองศาปืนให้ชี้ออกจากมือ
+        const angleHand = Math.atan2(indexMCP.y - wrist.y, indexMCP.x - wrist.x);
+        gunModel.rotation.z = -angleHand + Math.PI / 4;
+
       } else if (gunModel) {
         gunModel.visible = false;
       }
