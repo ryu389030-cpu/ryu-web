@@ -75,7 +75,7 @@
     const startBtn = document.getElementById('start-btn');
     const bgMusic = document.getElementById('bg-music');
 
-    // โหลดไฟล์รูปภาพตามชื่อไฟล์จริง
+    // โหลดไฟล์รูปภาพ
     const maskImg = new Image();
     maskImg.src = 'green lantern mask2.png';
 
@@ -124,13 +124,19 @@
         onFrame: async () => {
           await faceMesh.send({ image: videoElement });
           await hands.send({ image: videoElement });
-          drawScene();
         },
         width: 1280,
         height: 720
       });
-      camera.start();
+      await camera.start();
+      requestAnimationFrame(animateLoop);
     });
+
+    // แยกการวาดออกเป็นอนิเมชันลูปแบบขับเคลื่อนด้วยเวลา (Continuous Animation Loop)
+    function animateLoop() {
+      drawScene();
+      requestAnimationFrame(animateLoop);
+    }
 
     function drawScene() {
       canvasElement.width = videoElement.videoWidth || 1280;
@@ -145,21 +151,25 @@
       // วาดภาพจากกล้องลงบนแคนวาส
       canvasCtx.drawImage(videoElement, 0, 0, width, height);
 
-      // สร้างค่าอนิมัปชันลอยขึ้น-ลงด้วย Sine Wave (อิงตามเวลาปัจจุบัน)
-      const time = Date.now() * 0.003;
-      const floatOffset = Math.sin(time) * 15; // ระยะลอยขึ้น-ลง (15 พิกเซล)
+      // คำนวณระยะการลอยขึ้น-ลงนุ่มๆ (Sine Wave Floating Effect)
+      const now = performance.now() * 0.0025; // ความเร็วของการลอย
+      const floatRange = height * 0.025;      // ระยะทางในการลอยขึ้น-ลง
+      const mogoFloatY = Math.sin(now) * floatRange;
+      const chpFloatY = Math.cos(now) * floatRange; // ลอยสลับจังหวะกัน
 
-      // 1. วาด Ch'p (กระรอก) มุมซ้าย (ย่อขนาดลง + ใส่เอฟเฟกต์ลอย)
-      const chpWidth = width * 0.16;
-      const chpHeight = chpWidth * (chpImg.height / chpImg.width || 1);
-      const chpY = (height * 0.08) + floatOffset;
-      canvasCtx.drawImage(chpImg, width * 0.05, chpY, chpWidth, chpHeight);
-
-      // 2. วาด Mogo (ดาวเคราะห์) มุมขวา (ย่อขนาดลง + ใส่เอฟเฟกต์ลอยสลับเฟส)
-      const mogoWidth = width * 0.20;
+      // 1. วาด Mogo (ดาวเคราะห์) อยู่ฝั่งซ้าย (ย่อขนาดลง + ลอยขึ้นลง)
+      const mogoWidth = width * 0.15;
       const mogoHeight = mogoWidth * (mogoImg.height / mogoImg.width || 1);
-      const mogoY = (height * 0.12) - floatOffset; // ลอยสลับขึ้นลงกับตัวกระรอก
-      canvasCtx.drawImage(mogoImg, width * 0.75, mogoY, mogoWidth, mogoHeight);
+      const mogoX = width * 0.06;
+      const mogoY = (height * 0.1) + mogoFloatY;
+      canvasCtx.drawImage(mogoImg, mogoX, mogoY, mogoWidth, mogoHeight);
+
+      // 2. วาด Ch'p (กระรอก) อยู่ฝั่งขวา (ย่อขนาดลง + ลอยขึ้นลง)
+      const chpWidth = width * 0.12;
+      const chpHeight = chpWidth * (chpImg.height / chpImg.width || 1);
+      const chpX = width * 0.82;
+      const chpY = (height * 0.08) + chpFloatY;
+      canvasCtx.drawImage(chpImg, chpX, chpY, chpWidth, chpHeight);
 
       // 3. วาดหน้ากาก Green Lantern บนใบหน้า
       if (faceResults && faceResults.multiFaceLandmarks && faceResults.multiFaceLandmarks.length > 0) {
@@ -201,7 +211,7 @@
             Math.pow((middleTip.y - wrist.y) * height, 2)
           );
 
-          const ringSize = Math.max(40, handSize * 0.35);
+          const ringSize = Math.max(35, handSize * 0.32);
 
           canvasCtx.save();
           canvasCtx.translate(rx, ry);
