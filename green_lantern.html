@@ -17,7 +17,6 @@
       width: 100vw;
       height: 100vh;
     }
-    /* แสดงภาพกล้องวิดีโอไว้ที่ชั้นหลังสุด */
     video {
       position: absolute;
       top: 0;
@@ -25,9 +24,8 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transform: scaleX(-1); /* โหมดกระจกเงา */
+      transform: scaleX(-1);
     }
-    /* Canvas ซ้อนอยู่ชั้นหน้า */
     canvas {
       position: absolute;
       top: 0;
@@ -63,15 +61,13 @@
 
   <!-- Three.js & MediaPipe -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 </head>
 <body>
 
   <div id="container">
     <button id="start-btn">🟢 BECOME GREEN LANTERN 🟢</button>
-    <video id="webcam" playsinline></video>
+    <video id="webcam" autoplay playsinline muted></video>
     <canvas id="output_canvas"></canvas>
   </div>
 
@@ -95,7 +91,7 @@
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
     scene.add(ambientLight);
 
-    // 2. Load Green Lantern Mask Texture (2D Sprite / Plane)
+    // 2. Load Green Lantern Mask Texture
     const textureLoader = new THREE.TextureLoader();
     let maskMesh = null;
 
@@ -118,20 +114,29 @@
       faceLandmarksData = (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) ? results.multiFaceLandmarks[0] : null;
     });
 
-    // 4. Start Button Action
+    // 4. Start Button Action (บังคับขอสิทธิ์กล้องตรงๆ)
     startBtn.addEventListener('click', async () => {
       startBtn.style.display = 'none';
       bgMusic.play().catch(e => console.log("Audio play error:", e));
 
-      const cameraUtils = new Camera(videoElement, {
-        onFrame: async () => {
-          await faceMesh.send({ image: videoElement });
-        },
-        width: 1280,
-        height: 720
-      });
-      cameraUtils.start();
-      animate();
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false });
+        videoElement.srcObject = stream;
+        await videoElement.play();
+
+        const sendToMediaPipe = async () => {
+          if (!videoElement.paused && !videoElement.ended) {
+            await faceMesh.send({ image: videoElement });
+          }
+          requestAnimationFrame(sendToMediaPipe);
+        };
+        sendToMediaPipe();
+
+        animate();
+      } catch (err) {
+        console.error("Camera access error:", err);
+        alert("เปิดกล้องไม่ได้ครับเพื่อน! ลองเช็กสิทธิ์กล้องในเบราว์เซอร์ดูนะ");
+      }
     });
 
     function toWorldCoords(x, y, zDepth = 0) {
@@ -148,7 +153,6 @@
 
       if (faceLandmarksData && maskMesh) {
         maskMesh.visible = true;
-        // ใช้อายบราว/ดวงตาในการระบุตำแหน่งหน้ากาก
         const noseBridge = faceLandmarksData[6];
         const pos = toWorldCoords(noseBridge.x, noseBridge.y, 0);
         maskMesh.position.set(pos.x, pos.y, pos.z);
