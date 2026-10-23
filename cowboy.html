@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wild West Cowboy AR - Pro Tuner</title>
+  <title>Wild West Cowboy AR - Pro 3D Rotator</title>
   <style>
     * { box-sizing: border-box; }
     body, html {
@@ -29,16 +29,16 @@
     #ui-panel {
       position: absolute; top: 10px; left: 10px; z-index: 99999;
       background: rgba(0, 0, 0, 0.9); color: #fff; padding: 12px;
-      border-radius: 10px; border: 2px solid #ffd700; font-size: 12px;
-      width: 290px; max-height: 90vh; overflow-y: auto;
+      border-radius: 10px; border: 2px solid #ffd700; font-size: 11px;
+      width: 300px; max-height: 90vh; overflow-y: auto;
     }
-    #ui-panel h3 { margin: 0 0 8px 0; font-size: 14px; color: #ffd700; text-align: center; }
+    #ui-panel h3 { margin: 0 0 8px 0; font-size: 13px; color: #ffd700; text-align: center; }
     .control-group { margin-bottom: 8px; border-bottom: 1px solid #444; padding-bottom: 6px; }
-    .control-group h4 { margin: 2px 0; color: #00ffcc; font-size: 12px; }
-    .control-row { display: flex; align-items: center; justify-content: space-between; margin: 3px 0; }
+    .control-group h4 { margin: 2px 0; color: #00ffcc; font-size: 11px; }
+    .control-row { display: flex; align-items: center; justify-content: space-between; margin: 2px 0; }
     .control-row label { width: 65px; }
-    .control-row input[type="range"] { flex: 1; margin: 0 6px; }
-    .control-row input[type="number"] { width: 60px; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; text-align: center; }
+    .control-row input[type="range"] { flex: 1; margin: 0 4px; }
+    .control-row input[type="number"] { width: 50px; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; text-align: center; font-size: 10px; }
     #log-panel {
       position: absolute; bottom: 5px; left: 5px; right: 5px; z-index: 99999;
       background: rgba(255, 0, 0, 0.8); color: white; font-size: 11px; font-family: monospace; padding: 5px; border-radius: 5px; display: none;
@@ -56,26 +56,30 @@
     <button id="start-btn">🤠 เริ่มระบบ AR (กดตรงนี้) 🤠</button>
 
     <div id="ui-panel">
-      <h3>🤠 AR Tuner (Pro Scale & Z Depth)</h3>
+      <h3>🤠 AR 3D Tuner (Scale, Z, Rotate)</h3>
       
       <div class="control-group">
         <h4>🎩 หมวก (Hat Config)</h4>
-        <!-- ขยายสเกลสูงสุดถึง 0.5 -->
-        <div class="control-row"><label>Scale:</label><input type="range" id="hatScaleRange" min="0.001" max="0.5" step="0.005" value="0.02"><input type="number" id="hatScaleNum" step="0.005" value="0.02"></div>
-        <div class="control-row"><label>Offset X:</label><input type="range" id="hatXRange" min="-3.0" max="3.0" step="0.05" value="0.0"><input type="number" id="hatXNum" step="0.05" value="0.0"></div>
-        <div class="control-row"><label>Offset Y:</label><input type="range" id="hatYRange" min="-3.0" max="3.0" step="0.05" value="0.3"><input type="number" id="hatYNum" step="0.05" value="0.3"></div>
-        <!-- เพิ่มระยะ Z ให้ขยับเข้าออกจอได้กว้างขึ้น -->
-        <div class="control-row"><label>Offset Z:</label><input type="range" id="hatZRange" min="-5.0" max="5.0" step="0.1" value="0.0"><input type="number" id="hatZNum" step="0.1" value="0.0"></div>
+        <div class="control-row"><label>Scale:</label><input type="range" id="hatScaleR" min="0.001" max="0.5" step="0.005" value="0.02"><input type="number" id="hatScaleN" step="0.005" value="0.02"></div>
+        <div class="control-row"><label>Pos X:</label><input type="range" id="hatXR" min="-3.0" max="3.0" step="0.05" value="0.0"><input type="number" id="hatXN" step="0.05" value="0.0"></div>
+        <div class="control-row"><label>Pos Y:</label><input type="range" id="hatYR" min="-3.0" max="3.0" step="0.05" value="0.3"><input type="number" id="hatYN" step="0.05" value="0.3"></div>
+        <div class="control-row"><label>Pos Z:</label><input type="range" id="hatZR" min="-5.0" max="5.0" step="0.1" value="0.0"><input type="number" id="hatZN" step="0.1" value="0.0"></div>
+        <!-- เพิ่มคำสั่ง Rotate 3 แกน -->
+        <div class="control-row"><label>Rot X:</label><input type="range" id="hatRotXR" min="-3.14" max="3.14" step="0.05" value="0"><input type="number" id="hatRotXN" step="0.05" value="0"></div>
+        <div class="control-row"><label>Rot Y:</label><input type="range" id="hatRotYR" min="-3.14" max="3.14" step="0.05" value="0"><input type="number" id="hatRotYN" step="0.05" value="0"></div>
+        <div class="control-row"><label>Rot Z:</label><input type="range" id="hatRotZR" min="-3.14" max="3.14" step="0.05" value="0"><input type="number" id="hatRotZN" step="0.05" value="0"></div>
       </div>
 
       <div class="control-group">
         <h4>🔫 ปืน (Gun Config)</h4>
-        <!-- ขยายสเกลปืนสูงสุดถึง 0.2 -->
-        <div class="control-row"><label>Scale:</label><input type="range" id="gunScaleRange" min="0.001" max="0.2" step="0.002" value="0.01"><input type="number" id="gunScaleNum" step="0.002" value="0.01"></div>
-        <div class="control-row"><label>Offset X:</label><input type="range" id="gunXRange" min="-3.0" max="3.0" step="0.05" value="0.0"><input type="number" id="gunXNum" step="0.05" value="0.0"></div>
-        <div class="control-row"><label>Offset Y:</label><input type="range" id="gunYRange" min="-3.0" max="3.0" step="0.05" value="0.0"><input type="number" id="gunYNum" step="0.05" value="0.0"></div>
-        <!-- เพิ่มระยะ Z ให้ปืนดึงเข้าใกล้จอได้สุดๆ -->
-        <div class="control-row"><label>Offset Z:</label><input type="range" id="gunZRange" min="-5.0" max="5.0" step="0.1" value="0.0"><input type="number" id="gunZNum" step="0.1" value="0.0"></div>
+        <div class="control-row"><label>Scale:</label><input type="range" id="gunScaleR" min="0.001" max="0.2" step="0.002" value="0.01"><input type="number" id="gunScaleN" step="0.002" value="0.01"></div>
+        <div class="control-row"><label>Pos X:</label><input type="range" id="gunXR" min="-3.0" max="3.0" step="0.05" value="0.0"><input type="number" id="gunXN" step="0.05" value="0.0"></div>
+        <div class="control-row"><label>Pos Y:</label><input type="range" id="gunYR" min="-3.0" max="3.0" step="0.05" value="0.0"><input type="number" id="gunYN" step="0.05" value="0.0"></div>
+        <div class="control-row"><label>Pos Z:</label><input type="range" id="gunZR" min="-5.0" max="5.0" step="0.1" value="0.0"><input type="number" id="gunZN" step="0.1" value="0.0"></div>
+        <!-- เพิ่มคำสั่ง Rotate 3 แกน -->
+        <div class="control-row"><label>Rot X:</label><input type="range" id="gunRotXR" min="-3.14" max="3.14" step="0.05" value="0"><input type="number" id="gunRotXN" step="0.05" value="0"></div>
+        <div class="control-row"><label>Rot Y:</label><input type="range" id="gunRotYR" min="-3.14" max="3.14" step="0.05" value="0"><input type="number" id="gunRotYN" step="0.05" value="0"></div>
+        <div class="control-row"><label>Rot Z:</label><input type="range" id="gunRotZR" min="-3.14" max="3.14" step="0.05" value="0"><input type="number" id="gunRotZN" step="0.05" value="0"></div>
       </div>
     </div>
 
@@ -94,8 +98,8 @@
     }
     window.onerror = (m, u, l) => showLog(`ERR: ${m} (${l})`);
 
-    const HAT_CONFIG = { scale: 0.02, offsetX: 0.0, offsetY: 0.3, offsetZ: 0.0 };
-    const GUN_CONFIG = { scale: 0.01, offsetX: 0.0, offsetY: 0.0, offsetZ: 0.0 };
+    const HAT_CONFIG = { scale: 0.02, offsetX: 0.0, offsetY: 0.3, offsetZ: 0.0, rotX: 0, rotY: 0, rotZ: 0 };
+    const GUN_CONFIG = { scale: 0.01, offsetX: 0.0, offsetY: 0.0, offsetZ: 0.0, rotX: 0, rotY: 0, rotZ: 0 };
 
     function bindSync(rId, nId, obj, key) {
       const r = document.getElementById(rId), n = document.getElementById(nId);
@@ -104,15 +108,23 @@
       n.addEventListener('input', e => { r.value = e.target.value; obj[key] = parseFloat(e.target.value) || 0; });
     }
 
-    bindSync('hatScaleRange', 'hatScaleNum', HAT_CONFIG, 'scale');
-    bindSync('hatXRange', 'hatXNum', HAT_CONFIG, 'offsetX');
-    bindSync('hatYRange', 'hatYNum', HAT_CONFIG, 'offsetY');
-    bindSync('hatZRange', 'hatZNum', HAT_CONFIG, 'offsetZ');
+    // Bind Hat Controls
+    bindSync('hatScaleR', 'hatScaleN', HAT_CONFIG, 'scale');
+    bindSync('hatXR', 'hatXN', HAT_CONFIG, 'offsetX');
+    bindSync('hatYR', 'hatYN', HAT_CONFIG, 'offsetY');
+    bindSync('hatZR', 'hatZN', HAT_CONFIG, 'offsetZ');
+    bindSync('hatRotXR', 'hatRotXN', HAT_CONFIG, 'rotX');
+    bindSync('hatRotYR', 'hatRotYN', HAT_CONFIG, 'rotY');
+    bindSync('hatRotZR', 'hatRotZN', HAT_CONFIG, 'rotZ');
 
-    bindSync('gunScaleRange', 'gunScaleNum', GUN_CONFIG, 'scale');
-    bindSync('gunXRange', 'gunXNum', GUN_CONFIG, 'offsetX');
-    bindSync('gunYRange', 'gunYNum', GUN_CONFIG, 'offsetY');
-    bindSync('gunZRange', 'gunZNum', GUN_CONFIG, 'offsetZ');
+    // Bind Gun Controls
+    bindSync('gunScaleR', 'gunScaleN', GUN_CONFIG, 'scale');
+    bindSync('gunXR', 'gunXN', GUN_CONFIG, 'offsetX');
+    bindSync('gunYR', 'gunYN', GUN_CONFIG, 'offsetY');
+    bindSync('gunZR', 'gunZN', GUN_CONFIG, 'offsetZ');
+    bindSync('gunRotXR', 'gunRotXN', GUN_CONFIG, 'rotX');
+    bindSync('gunRotYR', 'gunRotYN', GUN_CONFIG, 'rotY');
+    bindSync('gunRotZR', 'gunRotZN', GUN_CONFIG, 'rotZ');
 
     const videoElement = document.getElementById('webcam');
     const canvasElement = document.getElementById('output_canvas');
@@ -182,22 +194,20 @@
         hatModel.visible = true;
         hatModel.scale.set(HAT_CONFIG.scale, HAT_CONFIG.scale, HAT_CONFIG.scale);
         const p = getScreenToWorld(faceData[10].x, faceData[10].y);
-        // ให้ค่า offsetZ สามารถดึงเข้าออกจอได้อย่างอิสระเต็มที่
         hatModel.position.set(p.x + HAT_CONFIG.offsetX, p.y + HAT_CONFIG.offsetY, p.z + HAT_CONFIG.offsetZ);
-        hatModel.rotation.z = -Math.atan2(faceData[263].y - faceData[33].y, faceData[263].x - faceData[33].x);
+        
+        // ผสมการหมุนตามการหันหน้า + องศา Rot X, Y, Z จาก UI ที่ผู้ใช้ปรับ
+        const baseRotZ = -Math.atan2(faceData[263].y - faceData[33].y, faceData[263].x - faceData[33].x);
+        hatModel.rotation.set(HAT_CONFIG.rotX, HAT_CONFIG.rotY, baseRotZ + HAT_CONFIG.rotZ);
       } else if (hatModel) { hatModel.visible = false; }
 
       if (handData && gunModel) {
         gunModel.visible = true;
         gunModel.scale.set(GUN_CONFIG.scale, GUN_CONFIG.scale, GUN_CONFIG.scale);
         const p = getScreenToWorld(handData[0].x, handData[0].y);
-        // ให้ค่า offsetZ ปืนสามารถดึงเข้ามาใกล้จอได้มากกว่าเดิม
         gunModel.position.set(p.x + GUN_CONFIG.offsetX, p.y + GUN_CONFIG.offsetY, p.z + GUN_CONFIG.offsetZ);
-        gunModel.rotation.z = -Math.atan2(handData[5].y - handData[0].y, handData[5].x - handData[0].x) + Math.PI / 4;
+        
+        // ผสมการหมุนตามนิ้ว + องศา Rot X, Y, Z จาก UI ที่ผู้ใช้ปรับ
+        const baseRotZ = -Math.atan2(handData[5].y - handData[0].y, handData[5].x - handData[0].x) + Math.PI / 4;
+        gunModel.rotation.set(GUN_CONFIG.rotX, GUN_CONFIG.rotY, baseRotZ + GUN_CONFIG.rotZ);
       } else if (gunModel) { gunModel.visible = false; }
-
-      renderer.render(scene, camera);
-    }
-  </script>
-</body>
-</html>
