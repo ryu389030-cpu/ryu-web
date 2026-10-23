@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Green Lantern AR Experience</title>
+  <title>Green Lantern AR - Live Tuner v2</title>
   <style>
     * { box-sizing: border-box; }
     body, html {
@@ -25,6 +25,21 @@
       color: #fff; background: #004d00; border: 3px solid #00ff00; border-radius: 50px;
       box-shadow: 0 0 30px rgba(0, 255, 0, 0.8); cursor: pointer; text-transform: uppercase;
     }
+
+    /* 🎛️ แผงปรับค่า Realtime สดบนหน้าจอ */
+    #ui-panel {
+      position: absolute; top: 10px; left: 10px; z-index: 99999;
+      background: rgba(0, 20, 0, 0.85); color: #00ff00; padding: 10px;
+      border-radius: 10px; border: 2px solid #00ff00; font-size: 11px;
+      width: 250px; max-height: 90vh; overflow-y: auto;
+    }
+    #ui-panel h3 { margin: 0 0 5px 0; font-size: 13px; text-align: center; color: #fff; }
+    .grp { margin-bottom: 6px; border-bottom: 1px solid #005500; padding-bottom: 4px; }
+    .grp h4 { margin: 2px 0; color: #fff; font-size: 11px; }
+    .row { display: flex; align-items: center; justify-content: space-between; margin: 2px 0; }
+    .row label { width: 60px; }
+    .row input[type="range"] { flex: 1; margin: 0 5px; }
+    .row input[type="number"] { width: 45px; background: #111; color: #00ff00; border: 1px solid #00ff00; text-align: center; font-size: 10px; }
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -35,6 +50,26 @@
 
   <div id="app-container">
     <button id="start-btn">🟢 IN BRIGHTEST DAY... (START) 🟢</button>
+
+    <!-- UI แผงปรับค่าสด -->
+    <div id="ui-panel">
+      <h3>🟢 Lantern Live Tuner</h3>
+      
+      <div class="grp">
+        <h4>🪐 Mogo (ดาวเคราะห์)</h4>
+        <div class="row"><label>Size:</label><input type="range" id="mogoSizeR" min="50" max="600" value="250"><input type="number" id="mogoSizeN" value="250"></div>
+        <div class="row"><label>Pos X:</label><input type="range" id="mogoXR" min="0" max="1000" value="50"><input type="number" id="mogoXN" value="50"></div>
+        <div class="row"><label>Pos Y:</label><input type="range" id="mogoYR" min="0" max="1000" value="50"><input type="number" id="mogoYN" value="50"></div>
+      </div>
+
+      <div class="grp">
+        <h4>💍 แหวน (Ring Config)</h4>
+        <div class="grp-row row"><label>Scale:</label><input type="range" id="ringScaleR" min="0.1" max="3.0" step="0.1" value="1.0"><input type="number" id="ringScaleN" step="0.1" value="1.0"></div>
+        <div class="grp-row row"><label>Offset X:</label><input type="range" id="ringXR" min="-100" max="100" value="0"><input type="number" id="ringXN" value="0"></div>
+        <div class="grp-row row"><label>Offset Y:</label><input type="range" id="ringYR" min="-100" max="100" value="0"><input type="number" id="ringYN" value="0"></div>
+      </div>
+    </div>
+
     <video id="webcam" playsinline></video>
     <canvas id="output_canvas"></canvas>
   </div>
@@ -42,19 +77,39 @@
   <audio id="bg-music" src="Hero.mp3" loop></audio>
 
   <script>
+    // เทคนิคป้องกัน Cache ด้วยการเติม Query String บังคับดึงไฟล์ใหม่
+    const cacheBuster = '?v=' + Date.now();
+
+    const imgMask = new Image(); imgMask.src = 'green lantern mask2.png' + cacheBuster;
+    const imgRing = new Image(); imgRing.src = 'landtern ring.png' + cacheBuster;
+    const imgMogo = new Image(); imgMogo.src = 'mogo.png' + cacheBuster;
+    const imgChp = new Image();  imgChp.src = "Ch'p-Photoroom.png" + cacheBuster;
+
+    const MOGO_CFG = { size: 250, x: 50, y: 50 };
+    const RING_CFG = { scale: 1.0, offsetX: 0, offsetY: 0 };
+
+    function bindS(rId, nId, obj, k) {
+      const r = document.getElementById(rId), n = document.getElementById(nId);
+      if(!r || !n) return;
+      r.addEventListener('input', e => { n.value = e.target.value; obj[k] = parseFloat(e.target.value); });
+      n.addEventListener('input', e => { r.value = e.target.value; obj[k] = parseFloat(e.target.value) || 0; });
+    }
+
+    bindS('mogoSizeR', 'mogoSizeN', MOGO_CFG, 'size');
+    bindS('mogoXR', 'mogoXN', MOGO_CFG, 'x');
+    bindS('mogoYR', 'mogoYN', MOGO_CFG, 'y');
+
+    bindS('ringScaleR', 'ringScaleN', RING_CFG, 'scale');
+    bindS('ringXR', 'ringXN', RING_CFG, 'offsetX');
+    bindS('ringYR', 'ringYN', RING_CFG, 'offsetY');
+
     const videoElement = document.getElementById('webcam');
     const canvasElement = document.getElementById('output_canvas');
     const ctx = canvasElement.getContext('2d');
     const startBtn = document.getElementById('start-btn');
     const bgMusic = document.getElementById('bg-music');
 
-    const imgMask = new Image(); imgMask.src = 'green lantern mask2.png';
-    const imgRing = new Image(); imgRing.src = 'landtern ring.png';
-    const imgMogo = new Image(); imgMogo.src = 'mogo.png';
-    const imgChp = new Image();  imgChp.src = "Ch'p-Photoroom.png";
-
-    let faceData = null;
-    let handData = null;
+    let faceData = null, handData = null;
 
     function resizeCanvas() {
       canvasElement.width = window.innerWidth;
@@ -92,20 +147,19 @@
 
       ctx.clearRect(0, 0, w, h);
 
-      // 1. วาด Mogo (ดาวเคราะห์) ไว้มุมซ้ายบนชัดเจน ไม่ให้ทับหัว
+      // 1. วาด Mogo (ดาวเคราะห์) ปรับตำแหน่งตาม UI สดๆ
       if (imgMogo.complete) {
-        const mogoSize = Math.min(w, h) * 0.32;
-        ctx.drawImage(imgMogo, w * 0.05, h * 0.05, mogoSize, mogoSize);
+        ctx.drawImage(imgMogo, MOGO_CFG.x, MOGO_CFG.y, MOGO_CFG.size, MOGO_CFG.size);
       }
 
-      // 2. วาด Ch'p (กระรอก) ไว้มุมขวาบน
+      // 2. วาด Ch'p (กระรอก) มุมขวาบน
       if (imgChp.complete) {
-        const chpWidth = Math.min(w, h) * 0.25;
-        const chpHeight = chpWidth * (imgChp.height / imgChp.width || 1.2);
-        ctx.drawImage(imgChp, w - chpWidth - (w * 0.05), h * 0.03, chpWidth, chpHeight);
+        const chpW = Math.min(w, h) * 0.25;
+        const chpH = chpW * (imgChp.height / imgChp.width || 1.2);
+        ctx.drawImage(imgChp, w - chpW - 20, 20, chpW, chpH);
       }
 
-      // 3. วาด หน้ากาก Green Lantern บนใบหน้า
+      // 3. วาด หน้ากาก Green Lantern บนหน้า
       if (faceData && imgMask.complete) {
         const leftEye = faceData[33], rightEye = faceData[263], noseBridge = faceData[168];
         const noseX = (1 - noseBridge.x) * w, noseY = noseBridge.y * h;
@@ -124,28 +178,22 @@
         ctx.restore();
       }
 
-      // 4. วาด แหวน Green Lantern ที่นิ้วกลาง (ปรับสัดส่วนรูปและพิกัดให้เป๊ะ)
+      // 4. วาด แหวน Green Lantern ติดนิ้วกลาง (วาดรูปจริง ไม่เอาวงกลมเขียววาดเองแล้ว)
       if (handData && imgRing.complete) {
-        // ใช้จุดข้อต่อกลางนิ้วกลาง (Landmark 10 หรือ 11) เพื่อให้สวมลงบนนิ้วพอดี
-        const ringJoint = handData[10]; 
-        const ringX = (1 - ringJoint.x) * w;
-        const ringY = ringJoint.y * h;
+        const middleFinger = handData[10]; // ข้อกลางนิ้วกลาง
+        const ringX = (1 - middleFinger.x) * w + RING_CFG.offsetX;
+        const ringY = middleFinger.y * h + RING_CFG.offsetY;
 
         const wrist = handData[0];
         const handSize = Math.hypot((1 - wrist.x) * w - ringX, wrist.y * h - ringY);
         
-        // คำนวณสัดส่วนรูปแหวนไม่ให้เบี้ยว
-        const ringWidth = Math.max(35, handSize * 0.35);
-        const ringHeight = ringWidth * (imgRing.height / imgRing.width || 1.0);
-
-        // คำนวณองศานิ้ว
-        const mcp = handData[9], tip = handData[12];
-        const fingerAngle = Math.atan2((tip.y - mcp.y) * h, ((1 - tip.x) - (1 - mcp.x)) * w);
+        // คำนวณขนาดและสัดส่วนรูปแหวนจริง
+        const ringW = Math.max(40, handSize * 0.4) * RING_CFG.scale;
+        const ringH = ringW * (imgRing.height / imgRing.width || 1.0);
 
         ctx.save();
         ctx.translate(ringX, ringY);
-        ctx.rotate(fingerAngle - Math.PI / 2);
-        ctx.drawImage(imgRing, -ringWidth / 2, -ringHeight / 2, ringWidth, ringHeight);
+        ctx.drawImage(imgRing, -ringW / 2, -ringH / 2, ringW, ringH);
         ctx.restore();
       }
 
