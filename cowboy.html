@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wild West Cowboy AR - Real-time Tuner</title>
+  <title>Wild West Cowboy AR - Tuner</title>
   <style>
     body {
       margin: 0;
@@ -34,12 +34,13 @@
       height: 100%;
       pointer-events: none;
     }
+    /* ปุ่ม Start ต้องอยู่ชั้นบนสุด ห้ามมีอะไรบัง */
     #start-btn {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      z-index: 100;
+      z-index: 9999;
       padding: 20px 40px;
       font-size: 22px;
       font-weight: bold;
@@ -52,12 +53,13 @@
       text-transform: uppercase;
     }
 
-    /* 🎛️ กล่อง UI สำหรับปรับแต่ง Real-time */
+    /* 🎛️ แผง UI ปรับค่า (ซ่อนไว้ก่อนจนกว่าจะกด Start) */
     #ui-panel {
+      display: none;
       position: absolute;
       top: 10px;
       left: 10px;
-      z-index: 50;
+      z-index: 1000;
       background: rgba(0, 0, 0, 0.85);
       color: #fff;
       padding: 12px 16px;
@@ -68,6 +70,7 @@
       max-height: 90vh;
       overflow-y: auto;
       box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      pointer-events: auto;
     }
     #ui-panel h3 {
       margin: 0 0 8px 0;
@@ -132,8 +135,8 @@
         
         <div class="control-row">
           <label>Scale:</label>
-          <input type="range" id="hatScaleRange" min="0.01" max="5.0" step="0.01" value="0.5">
-          <input type="number" id="hatScaleNum" step="0.01" value="0.5">
+          <input type="range" id="hatScaleRange" min="0.01" max="2.0" step="0.01" value="0.15">
+          <input type="number" id="hatScaleNum" step="0.01" value="0.15">
         </div>
 
         <div class="control-row">
@@ -161,8 +164,8 @@
 
         <div class="control-row">
           <label>Scale:</label>
-          <input type="range" id="gunScaleRange" min="0.01" max="5.0" step="0.01" value="0.4">
-          <input type="number" id="gunScaleNum" step="0.01" value="0.4">
+          <input type="range" id="gunScaleRange" min="0.01" max="2.0" step="0.01" value="0.1">
+          <input type="number" id="gunScaleNum" step="0.01" value="0.1">
         </div>
 
         <div class="control-row">
@@ -192,11 +195,9 @@
   <audio id="bg-music" src="Franco Micalizzi - Trinity titoli.mp3" loop></audio>
 
   <script>
-    // ตัวแปรเก็บค่าคอนฟิก
-    const HAT_CONFIG = { scale: 0.5, offsetX: 0.0, offsetY: 0.35, offsetZ: 0.0 };
-    const GUN_CONFIG = { scale: 0.4, offsetX: 0.0, offsetY: 0.0, offsetZ: 0.0 };
+    const HAT_CONFIG = { scale: 0.15, offsetX: 0.0, offsetY: 0.35, offsetZ: 0.0 };
+    const GUN_CONFIG = { scale: 0.1, offsetX: 0.0, offsetY: 0.0, offsetZ: 0.0 };
 
-    // ผูก Event Listeners กับ UI ให้เปลี่ยนค่าแบบ Real-time ทันที
     function bindInputSync(rangeId, numId, configObj, key) {
       const rangeEl = document.getElementById(rangeId);
       const numEl = document.getElementById(numId);
@@ -214,7 +215,6 @@
       });
     }
 
-    // ผูกค่า UI กับตัวแปรคอนฟิก
     bindInputSync('hatScaleRange', 'hatScaleNum', HAT_CONFIG, 'scale');
     bindInputSync('hatXRange', 'hatXNum', HAT_CONFIG, 'offsetX');
     bindInputSync('hatYRange', 'hatYNum', HAT_CONFIG, 'offsetY');
@@ -228,9 +228,9 @@
     const videoElement = document.getElementById('webcam');
     const canvasElement = document.getElementById('output_canvas');
     const startBtn = document.getElementById('start-btn');
+    const uiPanel = document.getElementById('ui-panel');
     const bgMusic = document.getElementById('bg-music');
 
-    // 1. Three.js Scene Setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.z = 5;
@@ -239,13 +239,11 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
-    scene.add(ambientLight);
+    scene.add(new THREE.AmbientLight(0xffffff, 1.5));
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
     dirLight.position.set(0, 10, 10);
     scene.add(dirLight);
 
-    // 2. Load Models
     const loader = new THREE.GLTFLoader();
     let hatModel = null;
     let gunModel = null;
@@ -262,7 +260,6 @@
       scene.add(gunModel);
     });
 
-    // 3. Trackers
     let faceLandmarksData = null;
     let handLandmarksData = null;
 
@@ -282,10 +279,10 @@
       handLandmarksData = (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) ? results.multiHandLandmarks[0] : null;
     });
 
-    // 4. Start Button
     startBtn.addEventListener('click', async () => {
       startBtn.style.display = 'none';
-      bgMusic.play().catch(e => console.log("Audio play error:", e));
+      uiPanel.style.display = 'block'; // แสดงแผง UI เมื่อกดเริ่ม
+      bgMusic.play().catch(e => console.log(e));
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false });
@@ -303,7 +300,7 @@
 
         animate();
       } catch (err) {
-        console.error("Camera error:", err);
+        console.error(err);
       }
     });
 
@@ -315,15 +312,11 @@
       return camera.position.clone().add(dir.multiplyScalar(distance));
     }
 
-    // 5. Render Loop
     function animate() {
       requestAnimationFrame(animate);
 
-      // --- หมวกคาวบอย ---
       if (faceLandmarksData && hatModel) {
         hatModel.visible = true;
-        
-        // อัปเดตสเกลแบบ Real-time
         hatModel.scale.set(HAT_CONFIG.scale, HAT_CONFIG.scale, HAT_CONFIG.scale);
 
         const forehead = faceLandmarksData[10];
@@ -331,13 +324,7 @@
         const rightEye = faceLandmarksData[263];
 
         const pos = getScreenToWorld(forehead.x, forehead.y);
-        
-        // อัปเดตตำแหน่งแบบ Real-time
-        hatModel.position.set(
-          pos.x + HAT_CONFIG.offsetX, 
-          pos.y + HAT_CONFIG.offsetY, 
-          pos.z + HAT_CONFIG.offsetZ
-        );
+        hatModel.position.set(pos.x + HAT_CONFIG.offsetX, pos.y + HAT_CONFIG.offsetY, pos.z + HAT_CONFIG.offsetZ);
 
         const angle = Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x);
         hatModel.rotation.z = -angle;
@@ -345,27 +332,30 @@
         hatModel.visible = false;
       }
 
-      // --- ปืนลูกโม่ ---
       if (handLandmarksData && gunModel) {
         gunModel.visible = true;
-
-        // อัปเดตสเกลแบบ Real-time
         gunModel.scale.set(GUN_CONFIG.scale, GUN_CONFIG.scale, GUN_CONFIG.scale);
 
         const wrist = handLandmarksData[0];
         const indexMCP = handLandmarksData[5];
 
         const pos = getScreenToWorld(wrist.x, wrist.y);
-
-        // อัปเดตตำแหน่งแบบ Real-time
-        gunModel.position.set(
-          pos.x + GUN_CONFIG.offsetX, 
-          pos.y + GUN_CONFIG.offsetY, 
-          pos.z + GUN_CONFIG.offsetZ
-        );
+        gunModel.position.set(pos.x + GUN_CONFIG.offsetX, pos.y + GUN_CONFIG.offsetY, pos.z + GUN_CONFIG.offsetZ);
 
         const angleHand = Math.atan2(indexMCP.y - wrist.y, indexMCP.x - wrist.x);
         gunModel.rotation.z = -angleHand + Math.PI / 4;
       } else if (gunModel) {
         gunModel.visible = false;
       }
+
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
