@@ -17,7 +17,6 @@
       width: 100vw;
       height: 100vh;
     }
-    /* ให้วิดีโอกล้องแสดงผลอยู่ชั้นหลังสุด */
     video {
       position: absolute;
       top: 0;
@@ -25,9 +24,8 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transform: scaleX(-1); /* โหมดกระจกเงา */
+      transform: scaleX(-1);
     }
-    /* Canvas 3D ลอยอยู่ชั้นหน้าแบบโปร่งแสง */
     canvas {
       position: absolute;
       top: 0;
@@ -77,7 +75,6 @@
     <canvas id="output_canvas"></canvas>
   </div>
 
-  <!-- ไฟล์เพลง Trinity -->
   <audio id="bg-music" src="Franco Micalizzi - Trinity titoli.mp3" loop></audio>
 
   <script>
@@ -95,8 +92,7 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
 
-    // Light
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.3);
     scene.add(ambientLight);
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
     dirLight.position.set(0, 10, 10);
@@ -109,14 +105,14 @@
 
     loader.load('cowboy_hat2.glb', (gltf) => {
       hatModel = gltf.scene;
-      hatModel.scale.set(1.5, 1.5, 1.5);
+      hatModel.scale.set(0.9, 0.9, 0.9); // ปรับขนาดหมวกให้เล็กลงพอดีหัว
       hatModel.visible = false;
       scene.add(hatModel);
     }, undefined, (err) => console.log('Hat model error:', err));
 
     loader.load('colt_revlover.glb', (gltf) => {
       gunModel = gltf.scene;
-      gunModel.scale.set(0.8, 0.8, 0.8);
+      gunModel.scale.set(0.45, 0.45, 0.45); // ปรับขนาดปืนให้สมส่วนกับมือ
       gunModel.visible = false;
       scene.add(gunModel);
     }, undefined, (err) => console.log('Gun model error:', err));
@@ -141,7 +137,7 @@
       handLandmarksData = (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) ? results.multiHandLandmarks[0] : null;
     });
 
-    // 4. Start Button Click Action (บังคับขอสิทธิ์กล้องตรงๆ)
+    // 4. Start Button Action
     startBtn.addEventListener('click', async () => {
       startBtn.style.display = 'none';
       bgMusic.play().catch(e => console.log("Audio play error:", e));
@@ -163,7 +159,6 @@
         animate();
       } catch (err) {
         console.error("Camera access error:", err);
-        alert("เปิดกล้องไม่ได้ครับเพื่อน! ลองเช็กสิทธิ์กล้องในเบราว์เซอร์ดูนะ");
       }
     });
 
@@ -179,11 +174,14 @@
     function animate() {
       requestAnimationFrame(animate);
 
+      // --- หมวกคาวบอย ---
       if (faceLandmarksData && hatModel) {
         hatModel.visible = true;
         const forehead = faceLandmarksData[10];
         const pos = toWorldCoords(forehead.x, forehead.y, 0);
-        hatModel.position.set(pos.x, pos.y + 0.35, pos.z);
+
+        // ดึงหมวกลงมาให้ครอบศีรษะพอดี
+        hatModel.position.set(pos.x, pos.y + 0.12, pos.z);
 
         const leftEye = faceLandmarksData[33];
         const rightEye = faceLandmarksData[263];
@@ -193,15 +191,17 @@
         hatModel.visible = false;
       }
 
+      // --- ปืนลูกโม่ ---
       if (handLandmarksData && gunModel) {
         gunModel.visible = true;
-        const indexFinger = handLandmarksData[8]; 
-        const wrist = handLandmarksData[0];       
+        const indexFinger = handLandmarksData[8];
+        const wrist = handLandmarksData[0];
         const pos = toWorldCoords(wrist.x, wrist.y, 0);
+
         gunModel.position.set(pos.x, pos.y, pos.z);
 
         const angleHand = Math.atan2(indexFinger.y - wrist.y, indexFinger.x - wrist.x);
-        gunModel.rotation.z = -angleHand;
+        gunModel.rotation.z = -angleHand + Math.PI / 6;
       } else if (gunModel) {
         gunModel.visible = false;
       }
