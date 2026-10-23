@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wild West Cowboy AR - Custom Config</title>
+  <title>Wild West Cowboy AR - Real-time Tuner</title>
   <style>
     body {
       margin: 0;
@@ -39,7 +39,7 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      z-index: 10;
+      z-index: 100;
       padding: 20px 40px;
       font-size: 22px;
       font-weight: bold;
@@ -50,6 +50,62 @@
       box-shadow: 0 0 30px rgba(139, 69, 19, 0.9);
       cursor: pointer;
       text-transform: uppercase;
+    }
+
+    /* 🎛️ กล่อง UI สำหรับปรับแต่ง Real-time */
+    #ui-panel {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 50;
+      background: rgba(0, 0, 0, 0.85);
+      color: #fff;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid #ffd700;
+      font-size: 12px;
+      max-width: 280px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+    #ui-panel h3 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      color: #ffd700;
+      text-align: center;
+    }
+    .control-group {
+      margin-bottom: 10px;
+      border-bottom: 1px solid #444;
+      padding-bottom: 8px;
+    }
+    .control-group h4 {
+      margin: 4px 0;
+      color: #00ffcc;
+      font-size: 13px;
+    }
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 4px 0;
+    }
+    .control-row label {
+      width: 65px;
+    }
+    .control-row input[type="range"] {
+      flex: 1;
+      margin: 0 8px;
+    }
+    .control-row input[type="number"] {
+      width: 50px;
+      background: #222;
+      color: #fff;
+      border: 1px solid #555;
+      border-radius: 4px;
+      text-align: center;
+      font-size: 12px;
     }
   </style>
 
@@ -65,6 +121,70 @@
 
   <div id="container">
     <button id="start-btn">🤠 START COWBOY AR 🤠</button>
+
+    <!-- 🎛️ แผงควบคุม UI ปรับค่า real-time -->
+    <div id="ui-panel">
+      <h3>🤠 AR Real-Time Tuner</h3>
+      
+      <!-- ปรับหมวก -->
+      <div class="control-group">
+        <h4>🎩 หมวก (Hat Config)</h4>
+        
+        <div class="control-row">
+          <label>Scale:</label>
+          <input type="range" id="hatScaleRange" min="0.01" max="5.0" step="0.01" value="0.5">
+          <input type="number" id="hatScaleNum" step="0.01" value="0.5">
+        </div>
+
+        <div class="control-row">
+          <label>Offset X:</label>
+          <input type="range" id="hatXRange" min="-3.0" max="3.0" step="0.05" value="0.0">
+          <input type="number" id="hatXNum" step="0.05" value="0.0">
+        </div>
+
+        <div class="control-row">
+          <label>Offset Y:</label>
+          <input type="range" id="hatYRange" min="-3.0" max="3.0" step="0.05" value="0.35">
+          <input type="number" id="hatYNum" step="0.05" value="0.35">
+        </div>
+
+        <div class="control-row">
+          <label>Offset Z:</label>
+          <input type="range" id="hatZRange" min="-3.0" max="3.0" step="0.05" value="0.0">
+          <input type="number" id="hatZNum" step="0.05" value="0.0">
+        </div>
+      </div>
+
+      <!-- ปรับปืน -->
+      <div class="control-group">
+        <h4>🔫 ปืน (Gun Config)</h4>
+
+        <div class="control-row">
+          <label>Scale:</label>
+          <input type="range" id="gunScaleRange" min="0.01" max="5.0" step="0.01" value="0.4">
+          <input type="number" id="gunScaleNum" step="0.01" value="0.4">
+        </div>
+
+        <div class="control-row">
+          <label>Offset X:</label>
+          <input type="range" id="gunXRange" min="-3.0" max="3.0" step="0.05" value="0.0">
+          <input type="number" id="gunXNum" step="0.05" value="0.0">
+        </div>
+
+        <div class="control-row">
+          <label>Offset Y:</label>
+          <input type="range" id="gunYRange" min="-3.0" max="3.0" step="0.05" value="0.0">
+          <input type="number" id="gunYNum" step="0.05" value="0.0">
+        </div>
+
+        <div class="control-row">
+          <label>Offset Z:</label>
+          <input type="range" id="gunZRange" min="-3.0" max="3.0" step="0.05" value="0.0">
+          <input type="number" id="gunZNum" step="0.05" value="0.0">
+        </div>
+      </div>
+    </div>
+
     <video id="webcam" autoplay playsinline muted></video>
     <canvas id="output_canvas"></canvas>
   </div>
@@ -72,23 +192,38 @@
   <audio id="bg-music" src="Franco Micalizzi - Trinity titoli.mp3" loop></audio>
 
   <script>
-    // ==========================================
-    // 🎛️ โซนปรับแต่งค่า (Tuning Config) เพื่อนแก้ตรงนี้ได้เลย!
-    // ==========================================
-    const HAT_CONFIG = {
-      scale: 1000,       // ปรับขนาดหมวก (เลขน้อย = เล็ก, เลขมาก = ใหญ่)
-      offsetX: 0.0,     // เลื่อนซ้าย (-) / ขวา (+)
-      offsetY: 0.35,    // เลื่อนลง (-) / ขึ้น (+) เพื่อสวมหัว
-      offsetZ: 0.0      // เลื่อนเข้า (-) / ออก (+)
-    };
+    // ตัวแปรเก็บค่าคอนฟิก
+    const HAT_CONFIG = { scale: 0.5, offsetX: 0.0, offsetY: 0.35, offsetZ: 0.0 };
+    const GUN_CONFIG = { scale: 0.4, offsetX: 0.0, offsetY: 0.0, offsetZ: 0.0 };
 
-    const GUN_CONFIG = {
-      scale: 1000,       // ปรับขนาดปืน
-      offsetX: 0.0,     // เลื่อนซ้าย (-) / ขวา (+)
-      offsetY: 0.0,     // เลื่อนลง (-) / ขึ้น (+)
-      offsetZ: 0.0      // เลื่อนเข้า (-) / ออก (+)
-    };
-    // ==========================================
+    // ผูก Event Listeners กับ UI ให้เปลี่ยนค่าแบบ Real-time ทันที
+    function bindInputSync(rangeId, numId, configObj, key) {
+      const rangeEl = document.getElementById(rangeId);
+      const numEl = document.getElementById(numId);
+
+      rangeEl.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        numEl.value = val;
+        configObj[key] = val;
+      });
+
+      numEl.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value) || 0;
+        rangeEl.value = val;
+        configObj[key] = val;
+      });
+    }
+
+    // ผูกค่า UI กับตัวแปรคอนฟิก
+    bindInputSync('hatScaleRange', 'hatScaleNum', HAT_CONFIG, 'scale');
+    bindInputSync('hatXRange', 'hatXNum', HAT_CONFIG, 'offsetX');
+    bindInputSync('hatYRange', 'hatYNum', HAT_CONFIG, 'offsetY');
+    bindInputSync('hatZRange', 'hatZNum', HAT_CONFIG, 'offsetZ');
+
+    bindInputSync('gunScaleRange', 'gunScaleNum', GUN_CONFIG, 'scale');
+    bindInputSync('gunXRange', 'gunXNum', GUN_CONFIG, 'offsetX');
+    bindInputSync('gunYRange', 'gunYNum', GUN_CONFIG, 'offsetY');
+    bindInputSync('gunZRange', 'gunZNum', GUN_CONFIG, 'offsetZ');
 
     const videoElement = document.getElementById('webcam');
     const canvasElement = document.getElementById('output_canvas');
@@ -117,14 +252,12 @@
 
     loader.load('cowboy_hat2.glb', (gltf) => {
       hatModel = gltf.scene;
-      hatModel.scale.set(HAT_CONFIG.scale, HAT_CONFIG.scale, HAT_CONFIG.scale);
       hatModel.visible = false;
       scene.add(hatModel);
     });
 
     loader.load('colt_revlover.glb', (gltf) => {
       gunModel = gltf.scene;
-      gunModel.scale.set(GUN_CONFIG.scale, GUN_CONFIG.scale, GUN_CONFIG.scale);
       gunModel.visible = false;
       scene.add(gunModel);
     });
@@ -189,13 +322,17 @@
       // --- หมวกคาวบอย ---
       if (faceLandmarksData && hatModel) {
         hatModel.visible = true;
+        
+        // อัปเดตสเกลแบบ Real-time
+        hatModel.scale.set(HAT_CONFIG.scale, HAT_CONFIG.scale, HAT_CONFIG.scale);
+
         const forehead = faceLandmarksData[10];
         const leftEye = faceLandmarksData[33];
         const rightEye = faceLandmarksData[263];
 
         const pos = getScreenToWorld(forehead.x, forehead.y);
         
-        // นำค่า Config มาบวกเพิ่มตรงนี้
+        // อัปเดตตำแหน่งแบบ Real-time
         hatModel.position.set(
           pos.x + HAT_CONFIG.offsetX, 
           pos.y + HAT_CONFIG.offsetY, 
@@ -211,12 +348,16 @@
       // --- ปืนลูกโม่ ---
       if (handLandmarksData && gunModel) {
         gunModel.visible = true;
+
+        // อัปเดตสเกลแบบ Real-time
+        gunModel.scale.set(GUN_CONFIG.scale, GUN_CONFIG.scale, GUN_CONFIG.scale);
+
         const wrist = handLandmarksData[0];
         const indexMCP = handLandmarksData[5];
 
         const pos = getScreenToWorld(wrist.x, wrist.y);
 
-        // นำค่า Config มาบวกเพิ่มตรงนี้
+        // อัปเดตตำแหน่งแบบ Real-time
         gunModel.position.set(
           pos.x + GUN_CONFIG.offsetX, 
           pos.y + GUN_CONFIG.offsetY, 
@@ -228,15 +369,3 @@
       } else if (gunModel) {
         gunModel.visible = false;
       }
-
-      renderer.render(scene, camera);
-    }
-
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-  </script>
-</body>
-</html>
