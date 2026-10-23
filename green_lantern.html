@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Green Lantern AR - Live Tuner</title>
+  <title>Green Lantern AR - Live Tuner Pro</title>
   
   <!-- MediaPipe Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -68,7 +68,9 @@
       border-radius: 10px;
       border: 2px solid #00ff66;
       font-size: 11px;
-      width: 260px;
+      width: 270px;
+      max-height: 95vh;
+      overflow-y: auto;
       backdrop-filter: blur(5px);
     }
     #ui-panel h3 {
@@ -116,9 +118,9 @@
   <div id="container">
     <button id="start-btn">⚡ BECOME GREEN LANTERN ⚡</button>
 
-    <!-- UI แผงปรับแต่งสด -->
+    <!-- UI แผงปรับแต่งสด (เพิ่ม Pos X ซ้าย-ขวาแล้ว) -->
     <div id="ui-panel">
-      <h3>🟢 Live Tuner Panel</h3>
+      <h3>🟢 Live Tuner Pro</h3>
       
       <!-- หน้ากาก -->
       <div class="control-group">
@@ -139,6 +141,11 @@
           <input type="number" id="mogoScaleN" step="0.01" value="0.15">
         </div>
         <div class="control-row">
+          <label>Pos X:</label>
+          <input type="range" id="mogoXOffsetR" min="-300" max="300" step="5" value="0">
+          <input type="number" id="mogoXOffsetN" step="5" value="0">
+        </div>
+        <div class="control-row">
           <label>Pos Y:</label>
           <input type="range" id="mogoYOffsetR" min="-300" max="300" step="5" value="0">
           <input type="number" id="mogoYOffsetN" step="5" value="0">
@@ -152,6 +159,11 @@
           <label>Scale:</label>
           <input type="range" id="chpScaleR" min="0.05" max="0.4" step="0.01" value="0.12">
           <input type="number" id="chpScaleN" step="0.01" value="0.12">
+        </div>
+        <div class="control-row">
+          <label>Pos X:</label>
+          <input type="range" id="chpXOffsetR" min="-300" max="300" step="5" value="0">
+          <input type="number" id="chpXOffsetN" step="5" value="0">
         </div>
         <div class="control-row">
           <label>Pos Y:</label>
@@ -169,16 +181,17 @@
   <audio id="bg-music" src="Hero.mp3" loop></audio>
 
   <script>
-    // ตัวแปรเก็บค่า Config สำหรับปรับแต่งสด
+    // ตัวแปรเก็บค่า Config เพิ่ม Pos X เข้าไป
     const CFG = {
       maskScale: 3.0,
       mogoScale: 0.15,
+      mogoOffsetX: 0,
       mogoOffsetY: 0,
       chpScale: 0.12,
+      chpOffsetX: 0,
       chpOffsetY: 0
     };
 
-    // เชื่อมปุ่มสไลด์ (Range) กับช่องตัวเลข (Number) ให้ซิงค์กัน
     function bindControl(rangeId, numId, objKey) {
       const r = document.getElementById(rangeId);
       const n = document.getElementById(numId);
@@ -189,8 +202,10 @@
 
     bindControl('maskScaleR', 'maskScaleN', 'maskScale');
     bindControl('mogoScaleR', 'mogoScaleN', 'mogoScale');
+    bindControl('mogoXOffsetR', 'mogoXOffsetN', 'mogoOffsetX');
     bindControl('mogoYOffsetR', 'mogoYOffsetN', 'mogoOffsetY');
     bindControl('chpScaleR', 'chpScaleN', 'chpScale');
+    bindControl('chpXOffsetR', 'chpXOffsetN', 'chpOffsetX');
     bindControl('chpYOffsetR', 'chpYOffsetN', 'chpOffsetY');
 
     const videoElement = document.getElementById('webcam');
@@ -199,7 +214,6 @@
     const startBtn = document.getElementById('start-btn');
     const bgMusic = document.getElementById('bg-music');
 
-    // โหลดไฟล์รูปภาพ
     const maskImg = new Image(); maskImg.src = 'green lantern mask2.png';
     const ringImg = new Image(); ringImg.src = 'landtern ring.png';
     const chpImg = new Image();  chpImg.src = "Ch'p-Photoroom.png";
@@ -208,14 +222,12 @@
     let faceResults = null;
     let handResults = null;
 
-    // ตั้งค่า Face Mesh
     const faceMesh = new FaceMesh({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
     });
     faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
     faceMesh.onResults((results) => { faceResults = results; });
 
-    // ตั้งค่า Hands Tracking
     const hands = new Hands({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
     });
@@ -253,30 +265,29 @@
       canvasCtx.save();
       canvasCtx.clearRect(0, 0, width, height);
       
-      // วาดภาพจากกล้อง
       canvasCtx.drawImage(videoElement, 0, 0, width, height);
 
-      // คำนวณคลื่นลอยขึ้น-ลง (Floating Animation)
+      // คลื่นลอยขึ้น-ลง (Floating Animation)
       const now = performance.now() * 0.0025;
       const floatRange = height * 0.025;
       const mogoFloatY = Math.sin(now) * floatRange;
       const chpFloatY = Math.cos(now) * floatRange;
 
-      // 1. วาด Mogo (ดาวเคราะห์ฝั่งซ้าย) พร้อมสเกลและตำแหน่ง Y ที่ปรับจาก UI
+      // 1. วาด Mogo (ปรับ Pos X / Pos Y / Scale ได้สดๆ)
       const mogoWidth = width * CFG.mogoScale;
       const mogoHeight = mogoWidth * (mogoImg.height / mogoImg.width || 1);
-      const mogoX = width * 0.06;
+      const mogoX = (width * 0.06) + CFG.mogoOffsetX;
       const mogoY = (height * 0.1) + mogoFloatY + CFG.mogoOffsetY;
       canvasCtx.drawImage(mogoImg, mogoX, mogoY, mogoWidth, mogoHeight);
 
-      // 2. วาด Ch'p (กระรอกฝั่งขวา) พร้อมสเกลและตำแหน่ง Y ที่ปรับจาก UI
+      // 2. วาด Ch'p (ปรับ Pos X / Pos Y / Scale ได้สดๆ)
       const chpWidth = width * CFG.chpScale;
       const chpHeight = chpWidth * (chpImg.height / chpImg.width || 1);
-      const chpX = width * 0.82;
+      const chpX = (width * 0.82) + CFG.chpOffsetX;
       const chpY = (height * 0.08) + chpFloatY + CFG.chpOffsetY;
       canvasCtx.drawImage(chpImg, chpX, chpY, chpWidth, chpHeight);
 
-      // 3. วาดหน้ากาก Green Lantern (คุมขนาดด้วย Mask Scale)
+      // 3. วาดหน้ากาก Green Lantern
       if (faceResults && faceResults.multiFaceLandmarks && faceResults.multiFaceLandmarks.length > 0) {
         const landmarks = faceResults.multiFaceLandmarks[0];
 
