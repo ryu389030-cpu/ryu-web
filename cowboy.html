@@ -17,25 +17,23 @@
       width: 100vw;
       height: 100vh;
     }
-    /* บังคับให้วิดีโอแสดงผลเต็มจอและอยู่ชั้นล่างสุดแบบชัดเจน */
-    video#webcam {
-      position: fixed;
+    /* ให้วิดีโอกล้องแสดงผลอยู่ชั้นหลังสุด */
+    video {
+      position: absolute;
       top: 0;
       left: 0;
-      width: 100vw;
-      height: 100vh;
+      width: 100%;
+      height: 100%;
       object-fit: cover;
-      z-index: 1;
-      transform: scaleX(-1);
+      transform: scaleX(-1); /* โหมดกระจกเงา */
     }
-    /* Canvas 3D อยู่ชั้นบนวิดีโอ */
-    canvas#output_canvas {
-      position: fixed;
+    /* Canvas 3D ลอยอยู่ชั้นหน้าแบบโปร่งแสง */
+    canvas {
+      position: absolute;
       top: 0;
       left: 0;
-      width: 100vw;
-      height: 100vh;
-      z-index: 2;
+      width: 100%;
+      height: 100%;
       pointer-events: none;
     }
     #start-btn {
@@ -54,12 +52,20 @@
       box-shadow: 0 0 30px rgba(139, 69, 19, 0.9);
       cursor: pointer;
       text-transform: uppercase;
+      transition: 0.3s;
+    }
+    #start-btn:hover {
+      background: #a0522d;
+      box-shadow: 0 0 40px #ffd700;
+      transform: translate(-50%, -50%) scale(1.05);
     }
   </style>
 
+  <!-- Three.js & GLTFLoader -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+
+  <!-- MediaPipe -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 </head>
@@ -71,6 +77,7 @@
     <canvas id="output_canvas"></canvas>
   </div>
 
+  <!-- ไฟล์เพลง Trinity -->
   <audio id="bg-music" src="Franco Micalizzi - Trinity titoli.mp3" loop></audio>
 
   <script>
@@ -79,6 +86,7 @@
     const startBtn = document.getElementById('start-btn');
     const bgMusic = document.getElementById('bg-music');
 
+    // 1. Three.js Scene Setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.z = 5;
@@ -87,12 +95,14 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
 
+    // Light
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
     scene.add(ambientLight);
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
     dirLight.position.set(0, 10, 10);
     scene.add(dirLight);
 
+    // 2. Load 3D Models
     const loader = new THREE.GLTFLoader();
     let hatModel = null;
     let gunModel = null;
@@ -102,15 +112,16 @@
       hatModel.scale.set(1.5, 1.5, 1.5);
       hatModel.visible = false;
       scene.add(hatModel);
-    });
+    }, undefined, (err) => console.log('Hat model error:', err));
 
     loader.load('colt_revlover.glb', (gltf) => {
       gunModel = gltf.scene;
       gunModel.scale.set(0.8, 0.8, 0.8);
       gunModel.visible = false;
       scene.add(gunModel);
-    });
+    }, undefined, (err) => console.log('Gun model error:', err));
 
+    // 3. Trackers Setup
     let faceLandmarksData = null;
     let handLandmarksData = null;
 
@@ -130,30 +141,30 @@
       handLandmarksData = (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) ? results.multiHandLandmarks[0] : null;
     });
 
+    // 4. Start Button Click Action (บังคับขอสิทธิ์กล้องตรงๆ)
     startBtn.addEventListener('click', async () => {
       startBtn.style.display = 'none';
       bgMusic.play().catch(e => console.log("Audio play error:", e));
 
-      // เรียกเปิดกล้องตรงๆ แบบบังคับสตรีมผ่าน Navigator เพื่อความชัวร์
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false });
         videoElement.srcObject = stream;
         await videoElement.play();
-      } catch (err) {
-        console.log("Webcam error:", err);
-        alert("ไม่สามารถเปิดกล้องได้ กรุณาตรวจสอบสิทธิ์การใช้งานกล้องในเบราว์เซอร์!");
-      }
 
-      const cameraUtils = new Camera(videoElement, {
-        onFrame: async () => {
-          await faceMesh.send({ image: videoElement });
-          await hands.send({ image: videoElement });
-        },
-        width: 1280,
-        height: 720
-      });
-      cameraUtils.start();
-      animate();
+        const sendToMediaPipe = async () => {
+          if (!videoElement.paused && !videoElement.ended) {
+            await faceMesh.send({ image: videoElement });
+            await hands.send({ image: videoElement });
+          }
+          requestAnimationFrame(sendToMediaPipe);
+        };
+        sendToMediaPipe();
+
+        animate();
+      } catch (err) {
+        console.error("Camera access error:", err);
+        alert("เปิดกล้องไม่ได้ครับเพื่อน! ลองเช็กสิทธิ์กล้องในเบราว์เซอร์ดูนะ");
+      }
     });
 
     function toWorldCoords(x, y, zDepth = 0) {
@@ -164,6 +175,7 @@
       return camera.position.clone().add(dir.multiplyScalar(distance));
     }
 
+    // 5. Render Loop
     function animate() {
       requestAnimationFrame(animate);
 
@@ -196,6 +208,12 @@
 
       renderer.render(scene, camera);
     }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
   </script>
 </body>
 </html>
