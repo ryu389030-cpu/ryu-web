@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wild West Cowboy AR - Fixed Click</title>
+  <title>Wild West Cowboy AR - Collapsible UI</title>
   <style>
     * { box-sizing: border-box; }
     body, html {
@@ -19,8 +19,6 @@
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       pointer-events: none; z-index: 2;
     }
-    
-    /* 🤠 ปรับปุ่มให้ z-index สูงสุด ไม่มีทางโดนบังแน่นอน */
     #start-btn {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       z-index: 2147483647; padding: 20px 40px; font-size: 22px; font-weight: bold;
@@ -28,14 +26,26 @@
       box-shadow: 0 0 30px rgba(255, 215, 0, 0.8); cursor: pointer; text-transform: uppercase;
     }
 
-    /* แผง UI ปรับค่า real-time */
+    /* 🎛️ แผง UI คาวบอย พร้อมปุ่มพับเก็บ (- / +) */
     #ui-panel {
       position: absolute; top: 10px; left: 10px; z-index: 99;
       background: rgba(0, 0, 0, 0.9); color: #fff; padding: 12px;
       border-radius: 10px; border: 2px solid #ffd700; font-size: 11px;
-      width: 300px; max-height: 90vh; overflow-y: auto;
+      width: 290px; max-height: 90vh; overflow-y: auto; transition: all 0.3s ease;
     }
-    #ui-panel h3 { margin: 0 0 8px 0; font-size: 13px; color: #ffd700; text-align: center; }
+    #ui-panel.minimized {
+      width: 45px; height: 45px; overflow: hidden; padding: 5px; border-radius: 50%;
+    }
+    #ui-panel.minimized .content-box { display: none; }
+
+    .panel-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px solid #444; padding-bottom: 4px;
+    }
+    .panel-header h3 { margin: 0; font-size: 13px; color: #ffd700; }
+    #toggle-btn {
+      background: #ffd700; color: #000; border: none; font-weight: bold; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; text-align: center; line-height: 24px; font-size: 14px;
+    }
+
     .control-group { margin-bottom: 8px; border-bottom: 1px solid #444; padding-bottom: 6px; }
     .control-group h4 { margin: 2px 0; color: #00ffcc; font-size: 11px; }
     .control-row { display: flex; align-items: center; justify-content: space-between; margin: 2px 0; }
@@ -43,7 +53,6 @@
     .control-row input[type="range"] { flex: 1; margin: 0 4px; }
     .control-row input[type="number"] { width: 50px; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; text-align: center; font-size: 10px; }
     
-    /* กล่องแสดง Error บนจอถ้าเกิดปัญหา */
     #log-panel {
       position: absolute; bottom: 10px; left: 10px; right: 10px; z-index: 2147483646;
       background: rgba(255, 0, 0, 0.9); color: white; font-size: 12px; font-family: monospace; padding: 10px; border-radius: 5px; display: none;
@@ -61,28 +70,32 @@
     <button id="start-btn">🤠 เริ่มระบบ AR (กดตรงนี้) 🤠</button>
 
     <div id="ui-panel">
-      <h3>🤠 AR 3D Tuner</h3>
-      
-      <div class="control-group">
-        <h4>🎩 หมวก (Hat Config)</h4>
-        <div class="control-row"><label>Scale:</label><input type="range" id="hatScaleR" min="0.001" max="0.5" step="0.005" value="0.02"><input type="number" id="hatScaleN" step="0.005" value="0.02"></div>
-        <div class="control-row"><label>Pos X:</label><input type="range" id="hatXR" min="-3.0" max="3.0" step="0.05" value="0.0"><input type="number" id="hatXN" step="0.05" value="0.0"></div>
-        <div class="control-row"><label>Pos Y:</label><input type="range" id="hatYR" min="-3.0" max="3.0" step="0.05" value="0.3"><input type="number" id="hatYN" step="0.05" value="0.3"></div>
-        <div class="control-row"><label>Pos Z:</label><input type="range" id="hatZR" min="-5.0" max="5.0" step="0.1" value="0.0"><input type="number" id="hatZN" step="0.1" value="0.0"></div>
-        <div class="control-row"><label>Rot X:</label><input type="range" id="hatRotXR" min="-3.14" max="3.14" step="0.05" value="0"><input type="number" id="hatRotXN" step="0.05" value="0"></div>
-        <div class="control-row"><label>Rot Y:</label><input type="range" id="hatRotYR" min="-3.14" max="3.14" step="0.05" value="0"><input type="number" id="hatRotYN" step="0.05" value="0"></div>
-        <div class="control-row"><label>Rot Z:</label><input type="range" id="hatRotZR" min="-3.14" max="3.14" step="0.05" value="0"><input type="number" id="hatRotZN" step="0.05" value="0"></div>
+      <div class="panel-header">
+        <h3 id="panel-title">🤠 AR Tuner</h3>
+        <button id="toggle-btn">-</button>
       </div>
+      <div class="content-box">
+        <div class="control-group">
+          <h4>🎩 หมวก (Hat Config)</h4>
+          <div class="control-row"><label>Scale:</label><input type="range" id="hatScaleR" min="0.001" max="0.5" step="0.005" value="0.02"><input type="number" id="hatScaleN" step="0.005" value="0.02"></div>
+          <div class="control-row"><label>Pos X:</label><input type="range" id="hatXR" min="-3.0" max="3.0" step="0.05" value="0.0"><input type="number" id="hatXN" step="0.05" value="0.0"></div>
+          <div class="control-row"><label>Pos Y:</label><input type="range" id="hatYR" min="-3.0" max="3.0" step="0.05" value="0.3"><input type="number" id="hatYN" step="0.05" value="0.3"></div>
+          <div class="control-row"><label>Pos Z:</label><input type="range" id="hatZR" min="-5.0" max="5.0" step="0.1" value="0.0"><input type="number" id="hatZN" step="0.1" value="0.0"></div>
+          <div class="control-row"><label>Rot X:</label><input type="range" id="hatRotXR" min="-3.14" max="3.14" step="0.05" value="0"><input type="number" id="hatRotXN" step="0.05" value="0"></div>
+          <div class="control-row"><label>Rot Y:</label><input type="range" id="hatRotYR" min="-3.14" max="3.14" step="0.05" value="0"><input type="number" id="hatRotYN" step="0.05" value="0"></div>
+          <div class="control-row"><label>Rot Z:</label><input type="range" id="hatRotZR" min="-3.14" max="3.14" step="0.05" value="0"><input type="number" id="hatRotZN" step="0.05" value="0"></div>
+        </div>
 
-      <div class="control-group">
-        <h4>🔫 ปืน (Gun Config)</h4>
-        <div class="control-row"><label>Scale:</label><input type="range" id="gunScaleR" min="0.001" max="0.2" step="0.002" value="0.01"><input type="number" id="gunScaleN" step="0.002" value="0.01"></div>
-        <div class="control-row"><label>Pos X:</label><input type="range" id="gunXR" min="-3.0" max="3.0" step="0.05" value="0.0"><input type="number" id="gunXN" step="0.05" value="0.0"></div>
-        <div class="control-row"><label>Pos Y:</label><input type="range" id="gunYR" min="-3.0" max="3.0" step="0.05" value="0.0"><input type="number" id="gunYN" step="0.05" value="0.0"></div>
-        <div class="control-row"><label>Pos Z:</label><input type="range" id="gunZR" min="-5.0" max="5.0" step="0.1" value="0.0"><input type="number" id="gunZN" step="0.1" value="0.0"></div>
-        <div class="control-row"><label>Rot X:</label><input type="range" id="gunRotXR" min="-3.14" max="3.14" step="0.05" value="0"><input type="number" id="gunRotXN" step="0.05" value="0"></div>
-        <div class="control-row"><label>Rot Y:</label><input type="range" id="gunRotYR" min="-3.14" max="3.14" step="0.05" value="0"><input type="number" id="gunRotYN" step="0.05" value="0"></div>
-        <div class="control-row"><label>Rot Z:</label><input type="range" id="gunRotZR" min="-3.14" max="3.14" step="0.05" value="0"><input type="number" id="gunRotZN" step="0.05" value="0"></div>
+        <div class="control-group">
+          <h4>🔫 ปืน (Gun Config)</h4>
+          <div class="control-row"><label>Scale:</label><input type="range" id="gunScaleR" min="0.001" max="0.2" step="0.002" value="0.01"><input type="number" id="gunScaleN" step="0.002" value="0.01"></div>
+          <div class="control-row"><label>Pos X:</label><input type="range" id="gunXR" min="-3.0" max="3.0" step="0.05" value="0.0"><input type="number" id="gunXN" step="0.05" value="0.0"></div>
+          <div class="control-row"><label>Pos Y:</label><input type="range" id="gunYR" min="-3.0" max="3.0" step="0.05" value="0.0"><input type="number" id="gunYN" step="0.05" value="0.0"></div>
+          <div class="control-row"><label>Pos Z:</label><input type="range" id="gunZR" min="-5.0" max="5.0" step="0.1" value="0.0"><input type="number" id="gunZN" step="0.1" value="0.0"></div>
+          <div class="control-row"><label>Rot X:</label><input type="range" id="gunRotXR" min="-3.14" max="3.14" step="0.05" value="0"><input type="number" id="gunRotXN" step="0.05" value="0"></div>
+          <div class="control-row"><label>Rot Y:</label><input type="range" id="gunRotYR" min="-3.14" max="3.14" step="0.05" value="0"><input type="number" id="gunRotYN" step="0.05" value="0"></div>
+          <div class="control-row"><label>Rot Z:</label><input type="range" id="gunRotZR" min="-3.14" max="3.14" step="0.05" value="0"><input type="number" id="gunRotZN" step="0.05" value="0"></div>
+        </div>
       </div>
     </div>
 
@@ -94,6 +107,24 @@
   <audio id="bg-music" src="Franco Micalizzi - Trinity titoli.mp3" loop></audio>
 
   <script>
+    const uiPanel = document.getElementById('ui-panel');
+    const toggleBtn = document.getElementById('toggle-btn');
+    const panelTitle = document.getElementById('panel-title');
+    let isMinimized = false;
+
+    toggleBtn.addEventListener('click', () => {
+      isMinimized = !isMinimized;
+      if (isMinimized) {
+        uiPanel.classList.add('minimized');
+        toggleBtn.textContent = '+';
+        panelTitle.style.display = 'none';
+      } else {
+        uiPanel.classList.remove('minimized');
+        toggleBtn.textContent = '-';
+        panelTitle.style.display = 'block';
+      }
+    });
+
     function showLog(msg) {
       const box = document.getElementById('log-panel');
       box.style.display = 'block';
