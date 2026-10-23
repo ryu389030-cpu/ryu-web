@@ -142,18 +142,24 @@
       canvasCtx.save();
       canvasCtx.clearRect(0, 0, width, height);
       
-      // สำคัญมาก: วาดภาพจากกล้องลงบนแคนวาสก่อน (ไม่งั้นจอจะมืดตื้อมองไม่เห็นอะไร)
+      // วาดภาพจากกล้องลงบนแคนวาส
       canvasCtx.drawImage(videoElement, 0, 0, width, height);
 
-      // 1. วาด Mogo (ดาวเคราะห์) มุมซ้าย
-      const mogoWidth = width * 0.28;
-      const mogoHeight = mogoWidth * (mogoImg.height / mogoImg.width || 1);
-      canvasCtx.drawImage(mogoImg, width * 0.05, height * 0.08, mogoWidth, mogoHeight);
+      // สร้างค่าอนิมัปชันลอยขึ้น-ลงด้วย Sine Wave (อิงตามเวลาปัจจุบัน)
+      const time = Date.now() * 0.003;
+      const floatOffset = Math.sin(time) * 15; // ระยะลอยขึ้น-ลง (15 พิกเซล)
 
-      // 2. วาด Ch'p (กระรอก) มุมขวาบน
-      const chpWidth = width * 0.22;
+      // 1. วาด Ch'p (กระรอก) มุมซ้าย (ย่อขนาดลง + ใส่เอฟเฟกต์ลอย)
+      const chpWidth = width * 0.16;
       const chpHeight = chpWidth * (chpImg.height / chpImg.width || 1);
-      canvasCtx.drawImage(chpImg, width * 0.73, height * 0.05, chpWidth, chpHeight);
+      const chpY = (height * 0.08) + floatOffset;
+      canvasCtx.drawImage(chpImg, width * 0.05, chpY, chpWidth, chpHeight);
+
+      // 2. วาด Mogo (ดาวเคราะห์) มุมขวา (ย่อขนาดลง + ใส่เอฟเฟกต์ลอยสลับเฟส)
+      const mogoWidth = width * 0.20;
+      const mogoHeight = mogoWidth * (mogoImg.height / mogoImg.width || 1);
+      const mogoY = (height * 0.12) - floatOffset; // ลอยสลับขึ้นลงกับตัวกระรอก
+      canvasCtx.drawImage(mogoImg, width * 0.75, mogoY, mogoWidth, mogoHeight);
 
       // 3. วาดหน้ากาก Green Lantern บนใบหน้า
       if (faceResults && faceResults.multiFaceLandmarks && faceResults.multiFaceLandmarks.length > 0) {
@@ -183,7 +189,7 @@
       // 4. วาดแหวนที่นิ้วกลาง (Middle Finger)
       if (handResults && handResults.multiHandLandmarks) {
         for (const landmarks of handResults.multiHandLandmarks) {
-          const middleFingerBase = landmarks[10]; // ใช้ข้อกลางนิ้วกลางเพื่อให้สวมพอดี
+          const middleFingerBase = landmarks[10];
 
           const rx = middleFingerBase.x * width;
           const ry = middleFingerBase.y * height;
