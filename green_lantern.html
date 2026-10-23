@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Green Lantern AR Experience</title>
+  <title>Green Lantern AR - Live Tuner</title>
   
   <!-- MediaPipe Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -55,12 +55,112 @@
       box-shadow: 0 0 35px #00ff66;
       transform: scale(1.05);
     }
+
+    /* 🎛️ แผงควบคุม Live Tuner มุมซ้ายบน */
+    #ui-panel {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 99999;
+      background: rgba(0, 20, 0, 0.85);
+      color: #00ff66;
+      padding: 12px;
+      border-radius: 10px;
+      border: 2px solid #00ff66;
+      font-size: 11px;
+      width: 260px;
+      backdrop-filter: blur(5px);
+    }
+    #ui-panel h3 {
+      margin: 0 0 8px 0;
+      font-size: 13px;
+      text-align: center;
+      color: #fff;
+    }
+    .control-group {
+      margin-bottom: 8px;
+      border-bottom: 1px solid #005500;
+      padding-bottom: 6px;
+    }
+    .control-group h4 {
+      margin: 2px 0;
+      color: #fff;
+      font-size: 11px;
+    }
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 3px 0;
+    }
+    .control-row label {
+      width: 70px;
+    }
+    .control-row input[type="range"] {
+      flex: 1;
+      margin: 0 5px;
+    }
+    .control-row input[type="number"] {
+      width: 45px;
+      background: #111;
+      color: #00ff66;
+      border: 1px solid #00ff66;
+      text-align: center;
+      font-size: 10px;
+      border-radius: 3px;
+    }
   </style>
 </head>
 <body>
 
   <div id="container">
     <button id="start-btn">⚡ BECOME GREEN LANTERN ⚡</button>
+
+    <!-- UI แผงปรับแต่งสด -->
+    <div id="ui-panel">
+      <h3>🟢 Live Tuner Panel</h3>
+      
+      <!-- หน้ากาก -->
+      <div class="control-group">
+        <h4>🎭 หน้ากาก (Mask)</h4>
+        <div class="control-row">
+          <label>Scale:</label>
+          <input type="range" id="maskScaleR" min="1.0" max="5.0" step="0.1" value="3.0">
+          <input type="number" id="maskScaleN" step="0.1" value="3.0">
+        </div>
+      </div>
+
+      <!-- ดาวเคราะห์ Mogo -->
+      <div class="control-group">
+        <h4>🪐 Mogo (ดาวเคราะห์ซ้าย)</h4>
+        <div class="control-row">
+          <label>Scale:</label>
+          <input type="range" id="mogoScaleR" min="0.05" max="0.4" step="0.01" value="0.15">
+          <input type="number" id="mogoScaleN" step="0.01" value="0.15">
+        </div>
+        <div class="control-row">
+          <label>Pos Y:</label>
+          <input type="range" id="mogoYOffsetR" min="-300" max="300" step="5" value="0">
+          <input type="number" id="mogoYOffsetN" step="5" value="0">
+        </div>
+      </div>
+
+      <!-- กระรอก Ch'p -->
+      <div class="control-group">
+        <h4>🐿️ Ch'p (กระรอกขวา)</h4>
+        <div class="control-row">
+          <label>Scale:</label>
+          <input type="range" id="chpScaleR" min="0.05" max="0.4" step="0.01" value="0.12">
+          <input type="number" id="chpScaleN" step="0.01" value="0.12">
+        </div>
+        <div class="control-row">
+          <label>Pos Y:</label>
+          <input type="range" id="chpYOffsetR" min="-300" max="300" step="5" value="0">
+          <input type="number" id="chpYOffsetN" step="5" value="0">
+        </div>
+      </div>
+    </div>
+
     <video id="webcam" playsinline></video>
     <canvas id="output_canvas"></canvas>
   </div>
@@ -69,6 +169,30 @@
   <audio id="bg-music" src="Hero.mp3" loop></audio>
 
   <script>
+    // ตัวแปรเก็บค่า Config สำหรับปรับแต่งสด
+    const CFG = {
+      maskScale: 3.0,
+      mogoScale: 0.15,
+      mogoOffsetY: 0,
+      chpScale: 0.12,
+      chpOffsetY: 0
+    };
+
+    // เชื่อมปุ่มสไลด์ (Range) กับช่องตัวเลข (Number) ให้ซิงค์กัน
+    function bindControl(rangeId, numId, objKey) {
+      const r = document.getElementById(rangeId);
+      const n = document.getElementById(numId);
+      if(!r || !n) return;
+      r.addEventListener('input', (e) => { n.value = e.target.value; CFG[objKey] = parseFloat(e.target.value); });
+      n.addEventListener('input', (e) => { r.value = e.target.value; CFG[objKey] = parseFloat(e.target.value) || 0; });
+    }
+
+    bindControl('maskScaleR', 'maskScaleN', 'maskScale');
+    bindControl('mogoScaleR', 'mogoScaleN', 'mogoScale');
+    bindControl('mogoYOffsetR', 'mogoYOffsetN', 'mogoOffsetY');
+    bindControl('chpScaleR', 'chpScaleN', 'chpScale');
+    bindControl('chpYOffsetR', 'chpYOffsetN', 'chpOffsetY');
+
     const videoElement = document.getElementById('webcam');
     const canvasElement = document.getElementById('output_canvas');
     const canvasCtx = canvasElement.getContext('2d');
@@ -76,17 +200,10 @@
     const bgMusic = document.getElementById('bg-music');
 
     // โหลดไฟล์รูปภาพ
-    const maskImg = new Image();
-    maskImg.src = 'green lantern mask2.png';
-
-    const ringImg = new Image();
-    ringImg.src = 'landtern ring.png';
-
-    const chpImg = new Image();
-    chpImg.src = "Ch'p-Photoroom.png";
-
-    const mogoImg = new Image();
-    mogoImg.src = 'mogo.png';
+    const maskImg = new Image(); maskImg.src = 'green lantern mask2.png';
+    const ringImg = new Image(); ringImg.src = 'landtern ring.png';
+    const chpImg = new Image();  chpImg.src = "Ch'p-Photoroom.png";
+    const mogoImg = new Image(); mogoImg.src = 'mogo.png';
 
     let faceResults = null;
     let handResults = null;
@@ -95,27 +212,16 @@
     const faceMesh = new FaceMesh({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
     });
-    faceMesh.setOptions({
-      maxNumFaces: 1,
-      refineLandmarks: true,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5
-    });
+    faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
     faceMesh.onResults((results) => { faceResults = results; });
 
     // ตั้งค่า Hands Tracking
     const hands = new Hands({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
     });
-    hands.setOptions({
-      maxNumHands: 2,
-      modelComplexity: 1,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5
-    });
+    hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
     hands.onResults((results) => { handResults = results; });
 
-    // ปุ่มกดเพื่อเริ่มกล้องและเปิดเพลง
     startBtn.addEventListener('click', async () => {
       startBtn.style.display = 'none';
       bgMusic.play().catch(e => console.log("Audio play error:", e));
@@ -132,7 +238,6 @@
       requestAnimationFrame(animateLoop);
     });
 
-    // แยกการวาดออกเป็นอนิเมชันลูปแบบขับเคลื่อนด้วยเวลา (Continuous Animation Loop)
     function animateLoop() {
       drawScene();
       requestAnimationFrame(animateLoop);
@@ -148,30 +253,30 @@
       canvasCtx.save();
       canvasCtx.clearRect(0, 0, width, height);
       
-      // วาดภาพจากกล้องลงบนแคนวาส
+      // วาดภาพจากกล้อง
       canvasCtx.drawImage(videoElement, 0, 0, width, height);
 
-      // คำนวณระยะการลอยขึ้น-ลงนุ่มๆ (Sine Wave Floating Effect)
-      const now = performance.now() * 0.0025; // ความเร็วของการลอย
-      const floatRange = height * 0.025;      // ระยะทางในการลอยขึ้น-ลง
+      // คำนวณคลื่นลอยขึ้น-ลง (Floating Animation)
+      const now = performance.now() * 0.0025;
+      const floatRange = height * 0.025;
       const mogoFloatY = Math.sin(now) * floatRange;
-      const chpFloatY = Math.cos(now) * floatRange; // ลอยสลับจังหวะกัน
+      const chpFloatY = Math.cos(now) * floatRange;
 
-      // 1. วาด Mogo (ดาวเคราะห์) อยู่ฝั่งซ้าย (ย่อขนาดลง + ลอยขึ้นลง)
-      const mogoWidth = width * 0.15;
+      // 1. วาด Mogo (ดาวเคราะห์ฝั่งซ้าย) พร้อมสเกลและตำแหน่ง Y ที่ปรับจาก UI
+      const mogoWidth = width * CFG.mogoScale;
       const mogoHeight = mogoWidth * (mogoImg.height / mogoImg.width || 1);
       const mogoX = width * 0.06;
-      const mogoY = (height * 0.1) + mogoFloatY;
+      const mogoY = (height * 0.1) + mogoFloatY + CFG.mogoOffsetY;
       canvasCtx.drawImage(mogoImg, mogoX, mogoY, mogoWidth, mogoHeight);
 
-      // 2. วาด Ch'p (กระรอก) อยู่ฝั่งขวา (ย่อขนาดลง + ลอยขึ้นลง)
-      const chpWidth = width * 0.12;
+      // 2. วาด Ch'p (กระรอกฝั่งขวา) พร้อมสเกลและตำแหน่ง Y ที่ปรับจาก UI
+      const chpWidth = width * CFG.chpScale;
       const chpHeight = chpWidth * (chpImg.height / chpImg.width || 1);
       const chpX = width * 0.82;
-      const chpY = (height * 0.08) + chpFloatY;
+      const chpY = (height * 0.08) + chpFloatY + CFG.chpOffsetY;
       canvasCtx.drawImage(chpImg, chpX, chpY, chpWidth, chpHeight);
 
-      // 3. วาดหน้ากาก Green Lantern บนใบหน้า
+      // 3. วาดหน้ากาก Green Lantern (คุมขนาดด้วย Mask Scale)
       if (faceResults && faceResults.multiFaceLandmarks && faceResults.multiFaceLandmarks.length > 0) {
         const landmarks = faceResults.multiFaceLandmarks[0];
 
@@ -186,7 +291,7 @@
         const eyeDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
         const angle = Math.atan2(deltaY, deltaX);
 
-        const maskWidth = eyeDistance * 3.0;
+        const maskWidth = eyeDistance * CFG.maskScale;
         const maskHeight = maskWidth * (maskImg.height / maskImg.width || 0.5);
 
         canvasCtx.save();
@@ -196,7 +301,7 @@
         canvasCtx.restore();
       }
 
-      // 4. วาดแหวนที่นิ้วกลาง (Middle Finger)
+      // 4. วาดแหวนที่นิ้วกลาง
       if (handResults && handResults.multiHandLandmarks) {
         for (const landmarks of handResults.multiHandLandmarks) {
           const middleFingerBase = landmarks[10];
@@ -215,10 +320,8 @@
 
           canvasCtx.save();
           canvasCtx.translate(rx, ry);
-          
           canvasCtx.shadowColor = '#00ff66';
           canvasCtx.shadowBlur = 20;
-
           canvasCtx.drawImage(ringImg, -ringSize / 2, -ringSize / 2, ringSize, ringSize);
           canvasCtx.restore();
         }
